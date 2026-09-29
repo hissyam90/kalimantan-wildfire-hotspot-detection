@@ -42,3 +42,15 @@ cd frontend
 npm install
 # Buat file .env dan tambahkan URL backend lokal: VITE_API_URL=http://localhost:8000
 npm run dev
+```
+<br><br>
+#
+<p align="center">
+  <sub>
+    Proyek ini menggunakan referensi dari 
+    <a href="https://www.kaggle.com/code/vidhuran07/wildfire-prediction-dataset-satellite-images" target="_blank">
+      Wildfire Prediction Dataset (Satellite Images) - Kaggle
+    </a> 
+    untuk melatih model Machine Learning.
+  </sub>
+</p>
