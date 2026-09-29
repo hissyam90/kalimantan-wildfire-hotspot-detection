@@ -43,3 +43,5 @@ app.get('/api/wind', require('./routes/wind'));
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Server jalan di port ${PORT}`));
+
+module.exports = app;
