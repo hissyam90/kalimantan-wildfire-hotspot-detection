@@ -1,5 +1,5 @@
 # Deteksi Dini Titik Panas (Wildfire WebGIS)
-![Preview WebGIS](./preview.jpg)
+![Preview WebGIS](./preview.png)
 
 Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di Kalimantan Timur berbasis citra satelit dan prediksi Machine Learning.
 <br>
