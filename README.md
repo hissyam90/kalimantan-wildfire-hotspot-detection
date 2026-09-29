@@ -44,11 +44,10 @@ npm run dev
 
 ## Request API
 
-### 1. NASA 
-https://firms.modaps.eosdis.nasa.gov/api/map_key
-
-### 2. OpenWeatherMap
-https://openweathermap.org/
+<pre>
+1. <b>NASA FIRMS      :</b> <a href="https://firms.modaps.eosdis.nasa.gov/api/map_key" target="_blank">https://firms.modaps.eosdis.nasa.gov/api/map_key</a>
+2. <b>OpenWeatherMap  :</b> <a href="https://openweathermap.org" target="_blank">https://openweathermap.org</a>
+</pre>
 
 #
 <p align="center">
