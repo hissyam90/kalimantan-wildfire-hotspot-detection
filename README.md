@@ -9,7 +9,7 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 <br>
 > [!CAUTION]
 > # PERHATIAN PENTING: KETERBATASAN AKSES MOBILE
-> Aplikasi ini tidak dapat diakses melalui perangkat mobile (HP). Proyek ini berjalan pada layanan hosting gratis dengan resource terbatas. Proses pemuatan awal (cold start), pengambilan data satelit NASA secara real-time, dan pemuatan model Machine Learning (.h5) ke dalam memori memerlukan resource besar. Harap gunakan PC atau Laptop untuk menghindari timeout atau crash.
+> Aplikasi ini tidak dapat diakses melalui perangkat mobile (HP). Proyek ini berjalan pada layanan hosting gratis dengan resource terbatas. Proses pemuatan awal (cold start), pengambilan data satelit NASA secara real-time, dan pemuatan model CNN (Convolutional Neural Network) (.h5) ke dalam memori memerlukan resource besar. Harap gunakan PC atau Laptop untuk menghindari timeout atau crash.
 <br>
 <br>
 <br>
@@ -18,7 +18,7 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 ## Fitur Utama
 * Pemetaan interaktif sebaran titik panas di wilayah Kalimantan Timur.
 * Penarikan data titik api secara real-time dari satelit NASA FIRMS (VIIRS NRT).
-* Verifikasi tingkat keyakinan (confidence level) titik panas menggunakan model Machine Learning.
+* Verifikasi tingkat keyakinan (confidence level) titik panas menggunakan model CNN (Convolutional Neural Network).
 * Dasbor statistik (total titik panas, sebaran tingkat keyakinan, dan distribusi per jam).
 
 ## Tech Stack
