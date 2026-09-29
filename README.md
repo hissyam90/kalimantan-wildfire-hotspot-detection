@@ -30,10 +30,8 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 ### 1. Backend
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Untuk Windows: venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
+npm install
+node server.js
 ```
 
 ### 2. Frontend
@@ -43,6 +41,15 @@ npm install
 # Buat file .env dan tambahkan URL backend lokal: VITE_API_URL=http://localhost:8000
 npm run dev
 ```
+
+## Request API
+
+### 1. NASA 
+https://firms.modaps.eosdis.nasa.gov/api/map_key
+
+### 2. OpenWeatherMap
+https://openweathermap.org/
+
 #
 <p align="center">
   <sub>
