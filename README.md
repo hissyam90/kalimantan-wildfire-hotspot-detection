@@ -43,7 +43,6 @@ npm install
 # Buat file .env dan tambahkan URL backend lokal: VITE_API_URL=http://localhost:8000
 npm run dev
 ```
-<br><br>
 #
 <p align="center">
   <sub>
