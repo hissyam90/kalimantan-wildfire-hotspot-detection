@@ -26,7 +26,7 @@ function App() {
         <button className={tab === 'verify' ? 'tab active' : 'tab'} onClick={() => setTab('verify')}>Verifikasi citra</button>
       </nav>
 
-      <main className={tab === 'map' ? 'content content-full' : 'content content-narrow'}>
+      <main className={tab === 'map' ? 'content content-full' : 'content content-verify'}>
         {tab === 'map' ? <HotspotMap theme={theme} /> : <ImageVerification />}
       </main>
     </div>
