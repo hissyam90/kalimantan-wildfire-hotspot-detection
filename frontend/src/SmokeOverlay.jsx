@@ -35,12 +35,13 @@ export default function SmokeOverlay({ points, windGrid }) {
 
     const ctx = canvas.getContext('2d');
     let raf;
+    let topLeft = map.containerPointToLayerPoint([0, 0]);
 
     const resizeCanvas = () => {
       const size = map.getSize();
       canvas.width = size.x;
       canvas.height = size.y;
-      const topLeft = map.containerPointToLayerPoint([0, 0]);
+      topLeft = map.containerPointToLayerPoint([0, 0]);
       canvas.style.left = `${topLeft.x}px`;
       canvas.style.top = `${topLeft.y}px`;
     };
@@ -77,12 +78,12 @@ export default function SmokeOverlay({ points, windGrid }) {
         particle.offset.x += vec.u * 0.4;
         particle.offset.y += vec.v * 0.4;
 
-        const origin = map.latLngToLayerPoint([particle.originLat, particle.originLon]);
-        const x = origin.x + particle.offset.x;
-        const y = origin.y + particle.offset.y;
+        const layerPoint = map.latLngToLayerPoint([particle.originLat, particle.originLon]);
+        const x = layerPoint.x - topLeft.x + particle.offset.x;
+        const y = layerPoint.y - topLeft.y + particle.offset.y;
 
         const lifeRatio = particle.age / particle.maxAge;
-        const alpha = Math.sin(lifeRatio * Math.PI) * 0.22;
+        const alpha = Math.sin(lifeRatio * Math.PI) * 0.14;
         const radius = 3 + lifeRatio * 6;
 
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
