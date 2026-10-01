@@ -24,7 +24,7 @@ export default function SmokeOverlay({ points, windGrid }) {
     const paneName = 'smokePane';
     if (!map.getPane(paneName)) {
       map.createPane(paneName);
-      map.getPane(paneName).style.zIndex = 350;
+      map.getPane(paneName).style.zIndex = 450;
       map.getPane(paneName).style.pointerEvents = 'none';
     }
     const pane = map.getPane(paneName);

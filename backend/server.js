@@ -28,26 +28,32 @@ app.post('/api/predict', predictLimiter, upload.single('image'), (req, res) => {
     return res.status(400).json({ error: 'Tidak ada gambar yang diupload' });
   }
 
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('X-Accel-Buffering', 'no');
+
   const imgPath = req.file.path;
   const py = spawn('python', ['python/infer.py', imgPath]);
 
-  let result = '';
-  let errorOutput = '';
+  let buffer = '';
 
-  py.stdout.on('data', (data) => { result += data.toString(); });
-  py.stderr.on('data', (data) => { errorOutput += data.toString(); });
+  py.stdout.on('data', (data) => {
+    buffer += data.toString();
+    const lines = buffer.split('\n');
+    buffer = lines.pop();
+    lines.forEach(line => {
+      if (line.trim()) res.write(line + '\n');
+    });
+  });
 
-  py.on('close', (code) => {
+  py.stderr.on('data', (data) => {
+    console.error('Python error:', data.toString());
+  });
+
+  py.on('close', () => {
     fs.unlink(imgPath, () => {});
-    if (code !== 0) {
-      console.error('Python error:', errorOutput);
-      return res.status(500).json({ error: 'Gagal memproses gambar', detail: errorOutput });
-    }
-    try {
-      res.json(JSON.parse(result));
-    } catch (e) {
-      res.status(500).json({ error: 'Response Python tidak valid', raw: result });
-    }
+    if (buffer.trim()) res.write(buffer + '\n');
+    res.end();
   });
 });
 

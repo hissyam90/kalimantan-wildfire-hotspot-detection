@@ -49,6 +49,7 @@ export default function HotspotMap({ theme }) {
   const [hotspots, setHotspots] = useState([]);
   const [windGrid, setWindGrid] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [smokeEnabled, setSmokeEnabled] = useState(true);
 
   useEffect(() => {
     axios.get(`${API_URL}/api/hotspots`)
@@ -79,7 +80,7 @@ export default function HotspotMap({ theme }) {
 
   const highConfidence = confidenceCounts['Tinggi'] || 0;
 
-  const smokePoints = windGrid.length > 0
+  const smokePoints = smokeEnabled && windGrid.length > 0
     ? hotspots.map(h => {
         const w = nearestWind(h.lat, h.lon, windGrid);
         return { lat: h.lat, lon: h.lon, windDeg: w.windDeg, windSpeed: w.windSpeed };
@@ -106,6 +107,15 @@ export default function HotspotMap({ theme }) {
               <span className="result-label">Periode data</span>
               <span className="result-value">24 jam terakhir</span>
             </div>
+
+            <label className="toggle-row">
+              <span>Animasi asap</span>
+              <input
+                type="checkbox"
+                checked={smokeEnabled}
+                onChange={(e) => setSmokeEnabled(e.target.checked)}
+              />
+            </label>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
             <div className="chart-box">
