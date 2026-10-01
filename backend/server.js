@@ -2,17 +2,28 @@ require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { spawn } = require('child_process');
 const fs = require('fs');
 
 const app = express();
+
 app.use(cors({
-  origin: ['https://wildfire-app-private.vercel.app/', 'http://localhost:5173']
+  origin: ['https://wildfire-app-private.vercel.app', 'http://localhost:5173']
 }));
 
-const upload = multer({ dest: 'uploads/' });
+const upload = multer({
+  dest: 'uploads/',
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
-app.post('/api/predict', upload.single('image'), (req, res) => {
+const predictLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: 'Terlalu banyak permintaan, coba lagi sebentar lagi' }
+});
+
+app.post('/api/predict', predictLimiter, upload.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'Tidak ada gambar yang diupload' });
   }
