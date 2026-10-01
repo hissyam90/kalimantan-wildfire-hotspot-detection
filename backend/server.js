@@ -9,7 +9,7 @@ const fs = require('fs');
 const app = express();
 
 app.use(cors({
-  origin: ['https://kalimantan-wildfire.vercel.app/', 'http://localhost:5173']
+  origin: ['https://kalimantan-wildfire.vercel.app', 'http://localhost:5173']
 }));
 
 const upload = multer({
