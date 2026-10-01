@@ -6,7 +6,9 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['https://wildfire-app-private.vercel.app/', 'http://localhost:5173']
+}));
 
 const upload = multer({ dest: 'uploads/' });
 

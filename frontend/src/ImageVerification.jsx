@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { API_URL } from './config';
 
 export default function ImageVerification() {
   const [file, setFile] = useState(null);
@@ -26,7 +27,7 @@ export default function ImageVerification() {
     formData.append('image', file);
 
     try {
-      const res = await axios.post('http://localhost:5000/api/predict', formData, {
+      const res = await axios.post(`${API_URL}/api/predict`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setResult(res.data);

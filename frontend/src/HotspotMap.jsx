@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import axios from 'axios';
 import SmokeOverlay from './SmokeOverlay';
+import { API_URL } from './config';
 
 function nearestWind(lat, lon, grid) {
   let best = grid[0];
@@ -50,12 +51,12 @@ export default function HotspotMap({ theme }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios.get('http://localhost:5000/api/hotspots')
+    axios.get(`${API_URL}/api/hotspots`)
       .then(res => setHotspots(res.data.hotspots))
       .catch(err => console.error('Gagal ambil hotspot:', err.message))
       .finally(() => setLoading(false));
 
-    axios.get('http://localhost:5000/api/wind')
+    axios.get(`${API_URL}/api/wind`)
       .then(res => setWindGrid(res.data.grid))
       .catch(err => console.error('Gagal ambil data angin:', err.message));
   }, []);

@@ -1,14 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useMap } from 'react-leaflet';
 
-// Interpolasi arah & kecepatan angin dari beberapa titik grid sekaligus
-// (inverse-distance weighting), bukan cuma titik terdekat.
 function windVectorAt(lat, lon, grid) {
   let sumWeight = 0, u = 0, v = 0;
   for (const g of grid) {
     const d = Math.max(Math.hypot(g.lat - lat, g.lon - lon), 0.05);
     const w = 1 / (d * d);
-    const rad = (((g.windDeg + 180) % 360) * Math.PI) / 180; // arah tujuan angin bertiup
+    const rad = (((g.windDeg + 180) % 360) * Math.PI) / 180;
     u += Math.sin(rad) * g.windSpeed * w;
     v += -Math.cos(rad) * g.windSpeed * w;
     sumWeight += w;
@@ -18,13 +16,23 @@ function windVectorAt(lat, lon, grid) {
 
 export default function SmokeOverlay({ points, windGrid }) {
   const map = useMap();
-  const canvasRef = useRef(null);
   const particlesRef = useRef([]);
 
   useEffect(() => {
     if (windGrid.length === 0) return;
 
-    const canvas = canvasRef.current;
+    const paneName = 'smokePane';
+    if (!map.getPane(paneName)) {
+      map.createPane(paneName);
+      map.getPane(paneName).style.zIndex = 350;
+      map.getPane(paneName).style.pointerEvents = 'none';
+    }
+    const pane = map.getPane(paneName);
+
+    const canvas = document.createElement('canvas');
+    canvas.style.position = 'absolute';
+    pane.appendChild(canvas);
+
     const ctx = canvas.getContext('2d');
     let raf;
 
@@ -32,10 +40,14 @@ export default function SmokeOverlay({ points, windGrid }) {
       const size = map.getSize();
       canvas.width = size.x;
       canvas.height = size.y;
+      const topLeft = map.containerPointToLayerPoint([0, 0]);
+      canvas.style.left = `${topLeft.x}px`;
+      canvas.style.top = `${topLeft.y}px`;
     };
     resizeCanvas();
-    map.on('resize', resizeCanvas);
     map.on('move', resizeCanvas);
+    map.on('zoom', resizeCanvas);
+    map.on('resize', resizeCanvas);
 
     particlesRef.current = points.flatMap((p) =>
       Array.from({ length: 2 }).map(() => ({
@@ -48,7 +60,7 @@ export default function SmokeOverlay({ points, windGrid }) {
     );
 
     const step = () => {
-            ctx.globalCompositeOperation = 'destination-out';
+      ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = 'rgba(0,0,0,0.08)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -65,7 +77,7 @@ export default function SmokeOverlay({ points, windGrid }) {
         particle.offset.x += vec.u * 0.4;
         particle.offset.y += vec.v * 0.4;
 
-        const origin = map.latLngToContainerPoint([particle.originLat, particle.originLon]);
+        const origin = map.latLngToLayerPoint([particle.originLat, particle.originLon]);
         const x = origin.x + particle.offset.x;
         const y = origin.y + particle.offset.y;
 
@@ -89,15 +101,12 @@ export default function SmokeOverlay({ points, windGrid }) {
 
     return () => {
       cancelAnimationFrame(raf);
-      map.off('resize', resizeCanvas);
       map.off('move', resizeCanvas);
+      map.off('zoom', resizeCanvas);
+      map.off('resize', resizeCanvas);
+      pane.removeChild(canvas);
     };
   }, [map, points, windGrid]);
 
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', zIndex: 400 }}
-    />
-  );
+  return null;
 }
