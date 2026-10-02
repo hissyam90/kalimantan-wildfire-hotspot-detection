@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import HotspotMap from './HotspotMap';
 import ImageVerification from './ImageVerification';
 import './App.css';
@@ -29,6 +30,7 @@ function App() {
       <main className={tab === 'map' ? 'content content-full' : 'content content-verify'}>
         {tab === 'map' ? <HotspotMap theme={theme} /> : <ImageVerification />}
       </main>
+      <Analytics />
     </div>
   );
 }

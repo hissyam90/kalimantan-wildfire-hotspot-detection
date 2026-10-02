@@ -1,0 +1,50 @@
+# Vercel Web Analytics Installation Report
+
+## Summary
+Successfully installed and configured Vercel Web Analytics for this React + Vite project following the latest official documentation from https://vercel.com/docs/analytics/quickstart.
+
+## Changes Made
+
+### 1. Package Installation
+- **Added**: `@vercel/analytics` package (97 dependencies added)
+- **Modified**: `frontend/package.json` - Added `@vercel/analytics` to dependencies
+- **Modified**: `frontend/package-lock.json` - Updated lockfile with new dependency tree
+
+### 2. Analytics Integration
+- **Modified**: `frontend/src/App.jsx`
+  - Added import: `import { Analytics } from '@vercel/analytics/react';`
+  - Added `<Analytics />` component at the end of the main app container
+  - Component placed inside the root div element to track all page views and interactions
+
+## Implementation Details
+
+### Framework-Specific Configuration
+This is a React + Vite project, so I used the React-specific import path:
+```javascript
+import { Analytics } from '@vercel/analytics/react';
+```
+
+### Component Placement
+The `<Analytics />` component was added to the root App component, just before the closing `</div>` tag. This ensures:
+- Analytics tracks all user interactions across both tabs (Peta hotspot and Verifikasi citra)
+- The component is rendered once and persists throughout the application lifecycle
+- Minimal impact on existing component structure
+
+### Verification Steps Completed
+1. ✅ Package installation successful (npm install completed without errors)
+2. ✅ Build verification passed (vite build completed successfully in 999ms)
+3. ✅ Linter check passed (oxlint found 0 errors, only 1 pre-existing warning unrelated to changes)
+4. ✅ No breaking changes introduced
+5. ✅ Lock file properly updated
+
+## Next Steps for Deployment
+1. Deploy the application to Vercel using `vercel deploy`
+2. Enable Web Analytics in the Vercel dashboard (Analytics sidebar → Enable button)
+3. After deployment, verify analytics are working by checking the browser's Network tab for requests to `/<unique-path>/view`
+4. Monitor the analytics dashboard in Vercel to see visitor data
+
+## Notes
+- The Analytics component is lightweight and won't impact application performance
+- No additional configuration is needed for basic page view tracking
+- Custom events and advanced features can be added later if needed (available on Pro/Enterprise plans)
+- The implementation preserves all existing functionality and code structure
