@@ -94,19 +94,24 @@ export default function HotspotMap({ theme }) {
         {loading ? (
           <p className="muted">Memuat data...</p>
         ) : (
-          <>
-            <div className="stat-row">
-              <span className="result-label">Total titik panas</span>
-              <span className="result-value mono">{hotspots.length}</span>
-            </div>
-            <div className="stat-row">
-              <span className="result-label">Keyakinan tinggi</span>
-              <span className="result-value mono">{highConfidence}</span>
-            </div>
-            <div className="stat-row">
-              <span className="result-label">Periode data</span>
-              <span className="result-value">24 jam terakhir</span>
-            </div>
+            <>
+              {hotspots.length === 0 && (
+                <p className="muted" style={{ marginBottom: 12 }}>
+                  Tidak ada titik panas terdeteksi pada periode ini — bisa menandakan kondisi cuaca basah/hujan di wilayah pemantauan.
+                </p>
+              )}
+              <div className="stat-row">
+                <span className="result-label">Total titik panas</span>
+                <span className="result-value mono">{hotspots.length}</span>
+              </div>
+              <div className="stat-row">
+                <span className="result-label">Keyakinan tinggi</span>
+                <span className="result-value mono">{highConfidence}</span>
+              </div>
+              <div className="stat-row">
+                <span className="result-label">Periode data</span>
+                <span className="result-value">48 jam terakhir</span>
+              </div>
 
             <label className="toggle-row">
               <span>Animasi asap</span>
