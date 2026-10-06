@@ -13,7 +13,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_KEY}/VIIRS_SNPP_NRT/${BBOX}/2`;
+    const url = `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${FIRMS_KEY}/VIIRS_SNPP_NRT/${BBOX}/1`;
     const response = await axios.get(url);
 
     const lines = response.data.trim().split('\n');
