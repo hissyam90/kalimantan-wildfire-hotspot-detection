@@ -110,7 +110,7 @@ export default function HotspotMap({ theme }) {
               </div>
               <div className="stat-row">
                 <span className="result-label">Periode data</span>
-                <span className="result-value">48 jam terakhir</span>
+                <span className="result-value">24 jam terakhir</span>
               </div>
 
             <label className="toggle-row">
