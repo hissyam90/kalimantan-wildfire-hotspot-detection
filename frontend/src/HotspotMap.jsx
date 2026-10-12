@@ -16,7 +16,10 @@ function nearestWind(lat, lon, grid) {
   let bestDist = Infinity;
   for (const g of grid) {
     const d = Math.hypot(g.lat - lat, g.lon - lon);
-    if (d < bestDist) { bestDist = d; best = g; }
+    if (d < bestDist) { 
+      bestDist = d; 
+      best = g; 
+    }
   }
   return best;
 }
@@ -216,6 +219,7 @@ export default function HotspotMap({ theme }) {
             <option value={2}>48 jam terakhir</option>
           </select>
         </div>
+        
         {windowInfo && (
           <p className="period-range">
             {formatWindow(windowInfo.start, windowInfo.end)} (waktu setempat)
@@ -248,10 +252,12 @@ export default function HotspotMap({ theme }) {
               <span className="result-label">Total titik panas</span>
               <span className="result-value mono">{hotspots.length}</span>
             </div>
+            
             <div className="stat-row">
               <span className="result-label">Keyakinan tinggi</span>
               <span className="result-value mono">{highConfidence}</span>
             </div>
+            
             {fetchedAt && (
               <div className="stat-row">
                 <span className="result-label">Data diambil</span>
@@ -269,6 +275,7 @@ export default function HotspotMap({ theme }) {
                 onChange={(e) => setSmokeEnabled(e.target.checked)}
               />
             </label>
+            
             <label className="toggle-row">
               <span>Geser peta dengan 2 jari</span>
               <input
@@ -277,6 +284,7 @@ export default function HotspotMap({ theme }) {
                 onChange={(e) => setTouchpadMode(e.target.checked)}
               />
             </label>
+            
             <p className="toggle-hint">
               {touchpadMode
                 ? 'Geser 2 jari untuk memindahkan peta. Cubit atau tombol +/- untuk zoom.'
@@ -326,7 +334,16 @@ export default function HotspotMap({ theme }) {
       </aside>
 
       <div className="map-area">
-        <MapContainer center={[-1, 116]} zoom={6} preferCanvas={true} style={{ height: '100%', width: '100%' }}>
+        <MapContainer 
+          center={[-1, 116]} 
+          zoom={6} 
+          preferCanvas={true} 
+          style={{ height: '100%', width: '100%' }}
+          scrollWheelZoom={!touchpadMode}
+          dragging={true}
+          touchZoom={true}
+          doubleClickZoom={true}
+        >
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
