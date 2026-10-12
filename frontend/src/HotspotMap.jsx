@@ -8,6 +8,10 @@ import axios from 'axios';
 import SmokeOverlay from './SmokeOverlay';
 import { API_URL } from './config';
 
+const NEW_STYLE = { color: '#A8462F', fillColor: '#A8462F', fillOpacity: 0.6, weight: 1 };
+const OLD_STYLE = { color: '#7F93A6', fillColor: '#7F93A6', fillOpacity: 0.5, weight: 1 };
+const CONFIDENCE_COLORS = { Tinggi: '#A8462F', Sedang: '#C98A4B', Rendah: '#8C8672' };
+
 function nearestWind(lat, lon, grid) {
   let best = grid[0];
   let bestDist = Infinity;
@@ -43,7 +47,43 @@ function daynightLabel(d) {
   return '-';
 }
 
-const CONFIDENCE_COLORS = { Tinggi: '#A8462F', Sedang: '#C98A4B', Rendah: '#8C8672' };
+function formatTime(t) {
+  const p = String(t || '').padStart(4, '0');
+  return `${p.slice(0, 2)}:${p.slice(2)} UTC`;
+}
+
+function formatWindow(startIso, endIso) {
+  const opts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+  const f = (iso) => new Date(iso).toLocaleString('id-ID', opts);
+  return `${f(startIso)} - ${f(endIso)}`;
+}
+
+function HotspotPopup({ h, windGrid }) {
+  const nearest = windGrid.length > 0 ? nearestWind(h.lat, h.lon, windGrid) : null;
+  const dist = nearest ? distanceKm(h.lat, h.lon, nearest.lat, nearest.lon) : null;
+
+  return (
+    <div className="hotspot-popup">
+      <div className="popup-row"><span>Kecerahan</span><span>{h.brightness}</span></div>
+      <div className="popup-row"><span>Daya radiatif api</span><span>{isNaN(h.frp) ? '-' : `${h.frp} MW`}</span></div>
+      <div className="popup-row"><span>Keyakinan</span><span>{confidenceLabel(h.confidence)}</span></div>
+      <div className="popup-row"><span>Waktu deteksi</span><span>{daynightLabel(h.daynight)}</span></div>
+      <div className="popup-row"><span>Satelit</span><span>{h.satellite || '-'}</span></div>
+      <div className="popup-row"><span>Tanggal</span><span>{h.date} {formatTime(h.time)}</span></div>
+
+      {nearest && (
+        <>
+          <div className="popup-divider" />
+          <div className="popup-row"><span>Wilayah acuan</span><span>{nearest.name} (±{Math.round(dist)} km)</span></div>
+          <div className="popup-row"><span>Suhu</span><span>{nearest.temp != null ? `${nearest.temp}°C` : '-'}</span></div>
+          <div className="popup-row"><span>Kelembapan</span><span>{nearest.humidity != null ? `${nearest.humidity}%` : '-'}</span></div>
+          <div className="popup-row"><span>Cuaca</span><span>{nearest.description || '-'}</span></div>
+          <div className="popup-row"><span>Arah angin</span><span>{degToCompass(nearest.windDeg)} ({nearest.windSpeed} m/s)</span></div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function HotspotMap({ theme }) {
   const [days, setDays] = useState(1);
@@ -51,7 +91,9 @@ export default function HotspotMap({ theme }) {
   const [windGrid, setWindGrid] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [stale, setStale] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(null);
+  const [windowInfo, setWindowInfo] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [smokeEnabled, setSmokeEnabled] = useState(true);
 
@@ -59,12 +101,15 @@ export default function HotspotMap({ theme }) {
     let cancelled = false;
     setLoading(true);
     setError(false);
+    setWindowInfo(null);
 
     axios.get(`${API_URL}/api/hotspots`, { params: { days }, timeout: 30000 })
       .then((res) => {
         if (cancelled) return;
         setHotspots(res.data.hotspots);
         setFetchedAt(res.data.fetchedAt || null);
+        setStale(Boolean(res.data.stale));
+        setWindowInfo({ start: res.data.windowStart, end: res.data.windowEnd });
       })
       .catch((err) => {
         if (cancelled) return;
@@ -85,51 +130,78 @@ export default function HotspotMap({ theme }) {
       .catch((err) => console.error('Gagal ambil data angin:', err.message));
   }, []);
 
-  const confidenceCounts = hotspots.reduce((acc, h) => {
-    const label = confidenceLabel(h.confidence);
-    acc[label] = (acc[label] || 0) + 1;
-    return acc;
-  }, {});
-  const pieData = Object.entries(confidenceCounts).map(([name, value]) => ({ name, value }));
+  const stats = useMemo(() => {
+    const confidenceCounts = {};
+    const hourCounts = Array.from({ length: 24 }, (_, h) => ({ jam: `${h}`, jumlah: 0 }));
+    let recent = 0;
 
-  const hourCounts = Array.from({ length: 24 }, (_, h) => ({ jam: `${h}`, jumlah: 0 }));
-  hotspots.forEach((h) => {
-    const t = parseInt(h.time, 10);
-    if (!isNaN(t)) {
-      const hour = Math.floor(t / 100);
-      if (hourCounts[hour]) hourCounts[hour].jumlah += 1;
-    }
-  });
+    hotspots.forEach((h) => {
+      const label = confidenceLabel(h.confidence);
+      confidenceCounts[label] = (confidenceCounts[label] || 0) + 1;
 
-  const highConfidence = confidenceCounts['Tinggi'] || 0;
+      const t = parseInt(h.time, 10);
+      if (!isNaN(t)) {
+        const hour = Math.floor(t / 100);
+        if (hourCounts[hour]) hourCounts[hour].jumlah += 1;
+      }
+
+      if (!h.older) recent += 1;
+    });
+
+    return {
+      confidenceCounts,
+      hourCounts,
+      recent,
+      older: hotspots.length - recent,
+      pieData: Object.entries(confidenceCounts).map(([name, value]) => ({ name, value }))
+    };
+  }, [hotspots]);
+
+  const markers = useMemo(
+    () =>
+      hotspots.map((h, i) => (
+        <CircleMarker
+          key={`dot-${i}`}
+          center={[h.lat, h.lon]}
+          radius={4}
+          pathOptions={h.older ? OLD_STYLE : NEW_STYLE}
+        >
+          <Popup>
+            <HotspotPopup h={h} windGrid={windGrid} />
+          </Popup>
+        </CircleMarker>
+      )),
+    [hotspots, windGrid]
+  );
 
   const smokePoints = useMemo(() => {
     if (!smokeEnabled || windGrid.length === 0) return [];
-    return hotspots.map((h) => {
-      const w = nearestWind(h.lat, h.lon, windGrid);
-      return { lat: h.lat, lon: h.lon, windDeg: w.windDeg, windSpeed: w.windSpeed };
-    });
+    return hotspots.map((h) => ({ lat: h.lat, lon: h.lon }));
   }, [smokeEnabled, windGrid, hotspots]);
+
+  const highConfidence = stats.confidenceCounts['Tinggi'] || 0;
 
   return (
     <div className="map-layout">
       <aside className="stats-panel">
         <h2>Statistik</h2>
 
-        <div className="period-switch">
-          <button
-            className={days === 1 ? 'period-btn active' : 'period-btn'}
-            onClick={() => setDays(1)}
+        <div className="stat-row">
+          <span className="result-label">Periode data</span>
+          <select
+            className="period-select"
+            value={days}
+            onChange={(e) => setDays(Number(e.target.value))}
           >
-            24 jam
-          </button>
-          <button
-            className={days === 2 ? 'period-btn active' : 'period-btn'}
-            onClick={() => setDays(2)}
-          >
-            48 jam
-          </button>
+            <option value={1}>24 jam terakhir</option>
+            <option value={2}>48 jam terakhir</option>
+          </select>
         </div>
+        {windowInfo && (
+          <p className="period-range">
+            {formatWindow(windowInfo.start, windowInfo.end)} (waktu setempat)
+          </p>
+        )}
 
         {loading ? (
           <p className="muted">Memuat data...</p>
@@ -142,11 +214,17 @@ export default function HotspotMap({ theme }) {
           </div>
         ) : (
           <>
-            {hotspots.length === 0 && (
+            {stale && (
               <p className="muted" style={{ marginBottom: 12 }}>
-                Tidak ada titik panas terdeteksi pada periode ini. Coba beralih ke periode 48 jam.
+                NASA sedang tidak merespons, menampilkan data tersimpan terakhir.
               </p>
             )}
+            {hotspots.length === 0 && (
+              <p className="muted" style={{ marginBottom: 12 }}>
+                Tidak ada titik panas terdeteksi pada periode ini. Bisa berarti wilayah sedang bersih, atau data satelit terbaru belum tersedia dari NASA.
+              </p>
+            )}
+
             <div className="stat-row">
               <span className="result-label">Total titik panas</span>
               <span className="result-value mono">{hotspots.length}</span>
@@ -155,10 +233,6 @@ export default function HotspotMap({ theme }) {
               <span className="result-label">Keyakinan tinggi</span>
               <span className="result-value mono">{highConfidence}</span>
             </div>
-            <div className="stat-row">
-              <span className="result-label">Periode data</span>
-              <span className="result-value">{days === 1 ? '24 jam terakhir' : '48 jam terakhir'}</span>
-            </div>
             {fetchedAt && (
               <div className="stat-row">
                 <span className="result-label">Data diambil</span>
@@ -166,6 +240,19 @@ export default function HotspotMap({ theme }) {
                   {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
+            )}
+
+            {days === 2 && (
+              <ul className="legend" style={{ marginTop: 10 }}>
+                <li>
+                  <span className="legend-dot" style={{ background: '#A8462F' }} />
+                  0-24 jam lalu — {stats.recent}
+                </li>
+                <li>
+                  <span className="legend-dot" style={{ background: '#7F93A6' }} />
+                  24-48 jam lalu — {stats.older}
+                </li>
+              </ul>
             )}
 
             <label className="toggle-row">
@@ -181,8 +268,8 @@ export default function HotspotMap({ theme }) {
             <div className="chart-box">
               <ResponsiveContainer width="100%" height={150}>
                 <PieChart>
-                  <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={32} outerRadius={55} paddingAngle={2}>
-                    {pieData.map((entry) => (
+                  <Pie data={stats.pieData} dataKey="value" nameKey="name" innerRadius={32} outerRadius={55} paddingAngle={2}>
+                    {stats.pieData.map((entry) => (
                       <Cell key={entry.name} fill={CONFIDENCE_COLORS[entry.name] || '#8C8672'} />
                     ))}
                   </Pie>
@@ -190,7 +277,7 @@ export default function HotspotMap({ theme }) {
                 </PieChart>
               </ResponsiveContainer>
               <ul className="legend">
-                {pieData.map((entry) => (
+                {stats.pieData.map((entry) => (
                   <li key={entry.name}>
                     <span className="legend-dot" style={{ background: CONFIDENCE_COLORS[entry.name] }} />
                     {entry.name} — {entry.value}
@@ -202,7 +289,7 @@ export default function HotspotMap({ theme }) {
             <h3 className="panel-subheading">Distribusi per jam (UTC)</h3>
             <div className="chart-box">
               <ResponsiveContainer width="100%" height={110}>
-                <BarChart data={hourCounts}>
+                <BarChart data={stats.hourCounts}>
                   <XAxis dataKey="jam" tick={{ fontSize: 10 }} interval={3} />
                   <YAxis tick={{ fontSize: 10 }} width={22} />
                   <RechartsTooltip />
@@ -220,46 +307,12 @@ export default function HotspotMap({ theme }) {
       </aside>
 
       <div className="map-area">
-        <MapContainer center={[-1, 116]} zoom={6} style={{ height: '100%', width: '100%' }}>
+        <MapContainer center={[-1, 116]} zoom={6} preferCanvas={true} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
-          {hotspots.map((h, i) => {
-            const nearest = windGrid.length > 0 ? nearestWind(h.lat, h.lon, windGrid) : null;
-            const dist = nearest ? distanceKm(h.lat, h.lon, nearest.lat, nearest.lon) : null;
-
-            return (
-              <CircleMarker
-                key={`dot-${i}`}
-                center={[h.lat, h.lon]}
-                radius={4}
-                pathOptions={{ color: '#A8462F', fillColor: '#A8462F', fillOpacity: 0.6, weight: 1 }}
-              >
-                <Popup>
-                  <div className="hotspot-popup">
-                    <div className="popup-row"><span>Kecerahan</span><span>{h.brightness}</span></div>
-                    <div className="popup-row"><span>Daya radiatif api</span><span>{isNaN(h.frp) ? '-' : `${h.frp} MW`}</span></div>
-                    <div className="popup-row"><span>Keyakinan</span><span>{confidenceLabel(h.confidence)}</span></div>
-                    <div className="popup-row"><span>Waktu deteksi</span><span>{daynightLabel(h.daynight)}</span></div>
-                    <div className="popup-row"><span>Satelit</span><span>{h.satellite || '-'}</span></div>
-                    <div className="popup-row"><span>Tanggal</span><span>{h.date} {h.time}</span></div>
-
-                    {nearest && (
-                      <>
-                        <div className="popup-divider" />
-                        <div className="popup-row"><span>Wilayah acuan</span><span>{nearest.name} (±{Math.round(dist)} km)</span></div>
-                        <div className="popup-row"><span>Suhu</span><span>{nearest.temp != null ? `${nearest.temp}°C` : '-'}</span></div>
-                        <div className="popup-row"><span>Kelembapan</span><span>{nearest.humidity != null ? `${nearest.humidity}%` : '-'}</span></div>
-                        <div className="popup-row"><span>Cuaca</span><span>{nearest.description || '-'}</span></div>
-                        <div className="popup-row"><span>Arah angin</span><span>{degToCompass(nearest.windDeg)} ({nearest.windSpeed} m/s)</span></div>
-                      </>
-                    )}
-                  </div>
-                </Popup>
-              </CircleMarker>
-            );
-          })}
+          {markers}
           {smokePoints.length > 0 && <SmokeOverlay points={smokePoints} windGrid={windGrid} />}
         </MapContainer>
       </div>

@@ -1,5 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useMap } from 'react-leaflet';
+
+const MAX_PARTICLES = 6000;
 
 function windVectorAt(lat, lon, grid) {
   let sumWeight = 0, u = 0, v = 0;
@@ -16,7 +18,6 @@ function windVectorAt(lat, lon, grid) {
 
 export default function SmokeOverlay({ points, windGrid }) {
   const map = useMap();
-  const particlesRef = useRef([]);
 
   useEffect(() => {
     if (windGrid.length === 0 || points.length === 0) return;
@@ -50,17 +51,26 @@ export default function SmokeOverlay({ points, windGrid }) {
     map.on('zoom', resizeCanvas);
     map.on('resize', resizeCanvas);
 
-    const perPoint = points.length > 4000 ? 1 : 2;
+    const perPoint = points.length * 2 <= MAX_PARTICLES ? 2 : 1;
+    const stride = Math.max(1, Math.ceil(points.length / MAX_PARTICLES));
+    const particles = [];
 
-    particlesRef.current = points.flatMap((p) =>
-      Array.from({ length: perPoint }).map(() => ({
-        originLat: p.lat,
-        originLon: p.lon,
-        offset: { x: (Math.random() - 0.5) * 20, y: (Math.random() - 0.5) * 20 },
-        age: Math.random() * 120,
-        maxAge: 90 + Math.random() * 60,
-      }))
-    );
+    for (let i = 0; i < points.length; i += stride) {
+      const p = points[i];
+      const vec = windVectorAt(p.lat, p.lon, windGrid);
+      for (let k = 0; k < perPoint; k++) {
+        particles.push({
+          lat: p.lat,
+          lon: p.lon,
+          vx: vec.u * 0.4,
+          vy: vec.v * 0.4,
+          ox: (Math.random() - 0.5) * 20,
+          oy: (Math.random() - 0.5) * 20,
+          age: Math.random() * 120,
+          maxAge: 90 + Math.random() * 60
+        });
+      }
+    }
 
     const step = () => {
       ctx.globalCompositeOperation = 'destination-out';
@@ -69,20 +79,19 @@ export default function SmokeOverlay({ points, windGrid }) {
 
       ctx.globalCompositeOperation = 'source-over';
 
-      particlesRef.current.forEach((particle) => {
-        const vec = windVectorAt(particle.originLat, particle.originLon, windGrid);
-
+      for (const particle of particles) {
         particle.age += 1;
         if (particle.age > particle.maxAge) {
           particle.age = 0;
-          particle.offset = { x: (Math.random() - 0.5) * 20, y: (Math.random() - 0.5) * 20 };
+          particle.ox = (Math.random() - 0.5) * 20;
+          particle.oy = (Math.random() - 0.5) * 20;
         }
-        particle.offset.x += vec.u * 0.4;
-        particle.offset.y += vec.v * 0.4;
+        particle.ox += particle.vx;
+        particle.oy += particle.vy;
 
-        const layerPoint = map.latLngToLayerPoint([particle.originLat, particle.originLon]);
-        const x = layerPoint.x - topLeft.x + particle.offset.x;
-        const y = layerPoint.y - topLeft.y + particle.offset.y;
+        const layerPoint = map.latLngToLayerPoint([particle.lat, particle.lon]);
+        const x = layerPoint.x - topLeft.x + particle.ox;
+        const y = layerPoint.y - topLeft.y + particle.oy;
 
         const lifeRatio = particle.age / particle.maxAge;
         const alpha = Math.sin(lifeRatio * Math.PI) * 0.14;
@@ -90,13 +99,13 @@ export default function SmokeOverlay({ points, windGrid }) {
 
         const gradient = ctx.createRadialGradient(x, y, 0, x, y, radius);
         gradient.addColorStop(0, `rgba(225, 222, 214, ${alpha})`);
-        gradient.addColorStop(1, `rgba(180, 176, 165, 0)`);
+        gradient.addColorStop(1, 'rgba(180, 176, 165, 0)');
 
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fillStyle = gradient;
         ctx.fill();
-      });
+      }
 
       raf = requestAnimationFrame(step);
     };
@@ -107,7 +116,7 @@ export default function SmokeOverlay({ points, windGrid }) {
       map.off('move', resizeCanvas);
       map.off('zoom', resizeCanvas);
       map.off('resize', resizeCanvas);
-      pane.removeChild(canvas);
+      if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
     };
   }, [map, points, windGrid]);
 
