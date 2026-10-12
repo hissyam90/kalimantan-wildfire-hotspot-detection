@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip,
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer
@@ -8,8 +8,7 @@ import axios from 'axios';
 import SmokeOverlay from './SmokeOverlay';
 import { API_URL } from './config';
 
-const NEW_STYLE = { color: '#A8462F', fillColor: '#A8462F', fillOpacity: 0.6, weight: 1 };
-const OLD_STYLE = { color: '#7F93A6', fillColor: '#7F93A6', fillOpacity: 0.5, weight: 1 };
+const MARKER_STYLE = { color: '#A8462F', fillColor: '#A8462F', fillOpacity: 0.6, weight: 1 };
 const CONFIDENCE_COLORS = { Tinggi: '#A8462F', Sedang: '#C98A4B', Rendah: '#8C8672' };
 
 function nearestWind(lat, lon, grid) {
@@ -58,6 +57,30 @@ function formatWindow(startIso, endIso) {
   return `${f(startIso)} - ${f(endIso)}`;
 }
 
+function TouchpadNavigation({ enabled }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!enabled) return;
+    const container = map.getContainer();
+
+    const onWheel = (e) => {
+      if (e.ctrlKey) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const factor = e.deltaMode === 1 ? 16 : 1;
+      map.panBy([e.deltaX * factor, e.deltaY * factor], { animate: false });
+    };
+
+    container.addEventListener('wheel', onWheel, { capture: true, passive: false });
+    return () => {
+      container.removeEventListener('wheel', onWheel, { capture: true });
+    };
+  }, [map, enabled]);
+
+  return null;
+}
+
 function HotspotPopup({ h, windGrid }) {
   const nearest = windGrid.length > 0 ? nearestWind(h.lat, h.lon, windGrid) : null;
   const dist = nearest ? distanceKm(h.lat, h.lon, nearest.lat, nearest.lon) : null;
@@ -96,6 +119,7 @@ export default function HotspotMap({ theme }) {
   const [windowInfo, setWindowInfo] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [smokeEnabled, setSmokeEnabled] = useState(true);
+  const [touchpadMode, setTouchpadMode] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -133,7 +157,6 @@ export default function HotspotMap({ theme }) {
   const stats = useMemo(() => {
     const confidenceCounts = {};
     const hourCounts = Array.from({ length: 24 }, (_, h) => ({ jam: `${h}`, jumlah: 0 }));
-    let recent = 0;
 
     hotspots.forEach((h) => {
       const label = confidenceLabel(h.confidence);
@@ -144,15 +167,11 @@ export default function HotspotMap({ theme }) {
         const hour = Math.floor(t / 100);
         if (hourCounts[hour]) hourCounts[hour].jumlah += 1;
       }
-
-      if (!h.older) recent += 1;
     });
 
     return {
       confidenceCounts,
       hourCounts,
-      recent,
-      older: hotspots.length - recent,
       pieData: Object.entries(confidenceCounts).map(([name, value]) => ({ name, value }))
     };
   }, [hotspots]);
@@ -164,7 +183,7 @@ export default function HotspotMap({ theme }) {
           key={`dot-${i}`}
           center={[h.lat, h.lon]}
           radius={4}
-          pathOptions={h.older ? OLD_STYLE : NEW_STYLE}
+          pathOptions={MARKER_STYLE}
         >
           <Popup>
             <HotspotPopup h={h} windGrid={windGrid} />
@@ -242,19 +261,6 @@ export default function HotspotMap({ theme }) {
               </div>
             )}
 
-            {days === 2 && (
-              <ul className="legend" style={{ marginTop: 10 }}>
-                <li>
-                  <span className="legend-dot" style={{ background: '#A8462F' }} />
-                  0-24 jam lalu — {stats.recent}
-                </li>
-                <li>
-                  <span className="legend-dot" style={{ background: '#7F93A6' }} />
-                  24-48 jam lalu — {stats.older}
-                </li>
-              </ul>
-            )}
-
             <label className="toggle-row">
               <span>Animasi asap</span>
               <input
@@ -263,6 +269,19 @@ export default function HotspotMap({ theme }) {
                 onChange={(e) => setSmokeEnabled(e.target.checked)}
               />
             </label>
+            <label className="toggle-row">
+              <span>Geser peta dengan 2 jari</span>
+              <input
+                type="checkbox"
+                checked={touchpadMode}
+                onChange={(e) => setTouchpadMode(e.target.checked)}
+              />
+            </label>
+            <p className="toggle-hint">
+              {touchpadMode
+                ? 'Geser 2 jari untuk memindahkan peta. Cubit atau tombol +/- untuk zoom.'
+                : 'Scroll untuk zoom. Klik tahan lalu geser untuk memindahkan peta.'}
+            </p>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
             <div className="chart-box">
@@ -312,6 +331,7 @@ export default function HotspotMap({ theme }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
+          <TouchpadNavigation enabled={touchpadMode} />
           {markers}
           {smokePoints.length > 0 && <SmokeOverlay points={smokePoints} windGrid={windGrid} />}
         </MapContainer>

@@ -412,3 +412,15 @@ body {
   color: var(--muted);
   line-height: 1.5;
 }
+
+.toggle-row + .toggle-row {
+  border-top: none;
+  margin-top: 0;
+}
+
+.toggle-hint {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
