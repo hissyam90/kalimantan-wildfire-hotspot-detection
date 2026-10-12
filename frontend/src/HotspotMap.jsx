@@ -69,8 +69,10 @@ function TouchpadNavigation({ enabled }) {
 
     const onWheel = (e) => {
       if (e.ctrlKey || e.metaKey) return;
+
       const isMouseWheel = Math.abs(e.deltaY) >= 100 || Math.abs(e.deltaX) >= 100 || e.deltaMode !== 0;
       if (isMouseWheel) return;
+
       e.preventDefault();
       e.stopImmediatePropagation();
       map.panBy([e.deltaX, e.deltaY], { animate: false });
@@ -123,7 +125,6 @@ export default function HotspotMap({ theme }) {
   const [windowInfo, setWindowInfo] = useState(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [smokeEnabled, setSmokeEnabled] = useState(true);
-  const [touchpadMode, setTouchpadMode] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -276,21 +277,6 @@ export default function HotspotMap({ theme }) {
                 onChange={(e) => setSmokeEnabled(e.target.checked)}
               />
             </label>
-            
-            <label className="toggle-row">
-              <span>Geser peta dengan 2 jari</span>
-              <input
-                type="checkbox"
-                checked={touchpadMode}
-                onChange={(e) => setTouchpadMode(e.target.checked)}
-              />
-            </label>
-            
-            <p className="toggle-hint">
-              {touchpadMode
-                ? 'Peta mendeteksi Mouse & Touchpad secara otomatis. Scroll mouse/cubit untuk zoom. Geser 2 jari untuk pindah peta.'
-                : 'Peta disetel untuk mouse biasa saja.'}
-            </p>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
             <div className="chart-box">
@@ -349,7 +335,7 @@ export default function HotspotMap({ theme }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
           />
-          <TouchpadNavigation enabled={touchpadMode} />
+          <TouchpadNavigation enabled={true} />
           {markers}
           {smokePoints.length > 0 && <SmokeOverlay points={smokePoints} windGrid={windGrid} />}
         </MapContainer>
