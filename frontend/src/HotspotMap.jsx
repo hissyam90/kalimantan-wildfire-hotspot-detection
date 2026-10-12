@@ -68,11 +68,12 @@ function TouchpadNavigation({ enabled }) {
     const container = map.getContainer();
 
     const onWheel = (e) => {
-      if (e.ctrlKey) return;
+      if (e.ctrlKey || e.metaKey) return;
+      const isMouseWheel = Math.abs(e.deltaY) >= 100 || Math.abs(e.deltaX) >= 100 || e.deltaMode !== 0;
+      if (isMouseWheel) return;
       e.preventDefault();
       e.stopImmediatePropagation();
-      const factor = e.deltaMode === 1 ? 16 : 1;
-      map.panBy([e.deltaX * factor, e.deltaY * factor], { animate: false });
+      map.panBy([e.deltaX, e.deltaY], { animate: false });
     };
 
     container.addEventListener('wheel', onWheel, { capture: true, passive: false });
@@ -287,8 +288,8 @@ export default function HotspotMap({ theme }) {
             
             <p className="toggle-hint">
               {touchpadMode
-                ? 'Geser 2 jari untuk memindahkan peta. Cubit atau tombol +/- untuk zoom.'
-                : 'Scroll untuk zoom. Klik tahan lalu geser untuk memindahkan peta.'}
+                ? 'Peta mendeteksi Mouse & Touchpad secara otomatis. Scroll mouse/cubit untuk zoom. Geser 2 jari untuk pindah peta.'
+                : 'Peta disetel untuk mouse biasa saja.'}
             </p>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
@@ -339,7 +340,7 @@ export default function HotspotMap({ theme }) {
           zoom={6} 
           preferCanvas={true} 
           style={{ height: '100%', width: '100%' }}
-          scrollWheelZoom={!touchpadMode}
+          scrollWheelZoom={true} 
           dragging={true}
           touchZoom={true}
           doubleClickZoom={true}
