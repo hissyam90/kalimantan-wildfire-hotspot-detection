@@ -340,3 +340,45 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+.period-switch {
+  display: flex;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.period-btn {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.period-btn + .period-btn {
+  border-left: 1px solid var(--border);
+}
+
+.period-btn.active {
+  background: var(--accent-green);
+  color: var(--bg);
+}
+
+.retry-button {
+  margin-top: 12px;
+  padding: 8px 16px;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  border-color: var(--accent-green);
+}

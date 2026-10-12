@@ -19,7 +19,7 @@ export default function SmokeOverlay({ points, windGrid }) {
   const particlesRef = useRef([]);
 
   useEffect(() => {
-    if (windGrid.length === 0) return;
+    if (windGrid.length === 0 || points.length === 0) return;
 
     const paneName = 'smokePane';
     if (!map.getPane(paneName)) {
@@ -50,8 +50,10 @@ export default function SmokeOverlay({ points, windGrid }) {
     map.on('zoom', resizeCanvas);
     map.on('resize', resizeCanvas);
 
+    const perPoint = points.length > 4000 ? 1 : 2;
+
     particlesRef.current = points.flatMap((p) =>
-      Array.from({ length: 2 }).map(() => ({
+      Array.from({ length: perPoint }).map(() => ({
         originLat: p.lat,
         originLon: p.lon,
         offset: { x: (Math.random() - 0.5) * 20, y: (Math.random() - 0.5) * 20 },

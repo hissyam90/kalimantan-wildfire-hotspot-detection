@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet';
 import {
   PieChart, Pie, Cell, Tooltip as RechartsTooltip,
@@ -46,20 +46,43 @@ function daynightLabel(d) {
 const CONFIDENCE_COLORS = { Tinggi: '#A8462F', Sedang: '#C98A4B', Rendah: '#8C8672' };
 
 export default function HotspotMap({ theme }) {
+  const [days, setDays] = useState(1);
   const [hotspots, setHotspots] = useState([]);
   const [windGrid, setWindGrid] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [fetchedAt, setFetchedAt] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [smokeEnabled, setSmokeEnabled] = useState(true);
 
   useEffect(() => {
-    axios.get(`${API_URL}/api/hotspots`)
-      .then(res => setHotspots(res.data.hotspots))
-      .catch(err => console.error('Gagal ambil hotspot:', err.message))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    setLoading(true);
+    setError(false);
 
+    axios.get(`${API_URL}/api/hotspots`, { params: { days }, timeout: 30000 })
+      .then((res) => {
+        if (cancelled) return;
+        setHotspots(res.data.hotspots);
+        setFetchedAt(res.data.fetchedAt || null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error('Gagal ambil hotspot:', err.message);
+        setHotspots([]);
+        setError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [days, reloadKey]);
+
+  useEffect(() => {
     axios.get(`${API_URL}/api/wind`)
-      .then(res => setWindGrid(res.data.grid))
-      .catch(err => console.error('Gagal ambil data angin:', err.message));
+      .then((res) => setWindGrid(res.data.grid))
+      .catch((err) => console.error('Gagal ambil data angin:', err.message));
   }, []);
 
   const confidenceCounts = hotspots.reduce((acc, h) => {
@@ -70,7 +93,7 @@ export default function HotspotMap({ theme }) {
   const pieData = Object.entries(confidenceCounts).map(([name, value]) => ({ name, value }));
 
   const hourCounts = Array.from({ length: 24 }, (_, h) => ({ jam: `${h}`, jumlah: 0 }));
-  hotspots.forEach(h => {
+  hotspots.forEach((h) => {
     const t = parseInt(h.time, 10);
     if (!isNaN(t)) {
       const hour = Math.floor(t / 100);
@@ -80,38 +103,70 @@ export default function HotspotMap({ theme }) {
 
   const highConfidence = confidenceCounts['Tinggi'] || 0;
 
-  const smokePoints = smokeEnabled && windGrid.length > 0
-    ? hotspots.map(h => {
-        const w = nearestWind(h.lat, h.lon, windGrid);
-        return { lat: h.lat, lon: h.lon, windDeg: w.windDeg, windSpeed: w.windSpeed };
-      })
-    : [];
+  const smokePoints = useMemo(() => {
+    if (!smokeEnabled || windGrid.length === 0) return [];
+    return hotspots.map((h) => {
+      const w = nearestWind(h.lat, h.lon, windGrid);
+      return { lat: h.lat, lon: h.lon, windDeg: w.windDeg, windSpeed: w.windSpeed };
+    });
+  }, [smokeEnabled, windGrid, hotspots]);
 
   return (
     <div className="map-layout">
       <aside className="stats-panel">
         <h2>Statistik</h2>
+
+        <div className="period-switch">
+          <button
+            className={days === 1 ? 'period-btn active' : 'period-btn'}
+            onClick={() => setDays(1)}
+          >
+            24 jam
+          </button>
+          <button
+            className={days === 2 ? 'period-btn active' : 'period-btn'}
+            onClick={() => setDays(2)}
+          >
+            48 jam
+          </button>
+        </div>
+
         {loading ? (
           <p className="muted">Memuat data...</p>
+        ) : error ? (
+          <div>
+            <p className="error-text">Gagal memuat data titik panas dari server.</p>
+            <button className="retry-button" onClick={() => setReloadKey((k) => k + 1)}>
+              Coba lagi
+            </button>
+          </div>
         ) : (
-            <>
-              {hotspots.length === 0 && (
-                <p className="muted" style={{ marginBottom: 12 }}>
-                  Tidak ada titik panas terdeteksi pada periode ini — bisa menandakan kondisi cuaca basah/hujan di wilayah pemantauan.
-                </p>
-              )}
+          <>
+            {hotspots.length === 0 && (
+              <p className="muted" style={{ marginBottom: 12 }}>
+                Tidak ada titik panas terdeteksi pada periode ini. Coba beralih ke periode 48 jam.
+              </p>
+            )}
+            <div className="stat-row">
+              <span className="result-label">Total titik panas</span>
+              <span className="result-value mono">{hotspots.length}</span>
+            </div>
+            <div className="stat-row">
+              <span className="result-label">Keyakinan tinggi</span>
+              <span className="result-value mono">{highConfidence}</span>
+            </div>
+            <div className="stat-row">
+              <span className="result-label">Periode data</span>
+              <span className="result-value">{days === 1 ? '24 jam terakhir' : '48 jam terakhir'}</span>
+            </div>
+            {fetchedAt && (
               <div className="stat-row">
-                <span className="result-label">Total titik panas</span>
-                <span className="result-value mono">{hotspots.length}</span>
+                <span className="result-label">Data diambil</span>
+                <span className="result-value mono">
+                  {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
               </div>
-              <div className="stat-row">
-                <span className="result-label">Keyakinan tinggi</span>
-                <span className="result-value mono">{highConfidence}</span>
-              </div>
-              <div className="stat-row">
-                <span className="result-label">Periode data</span>
-                <span className="result-value">48 jam terakhir</span>
-              </div>
+            )}
 
             <label className="toggle-row">
               <span>Animasi asap</span>
