@@ -16,7 +16,7 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 <br>
 
 ## Fitur Utama
-* Pemetaan interaktif sebaran titik panas di wilayah Kalimantan Timur.
+* Pemetaan interaktif sebaran titik panas di wilayah Kalimantan.
 * Penarikan data titik api secara real-time dari satelit NASA FIRMS (VIIRS NRT).
 * Verifikasi tingkat keyakinan (confidence level) titik panas menggunakan model CNN (Convolutional Neural Network).
 * Dasbor statistik (total titik panas, sebaran tingkat keyakinan, dan distribusi per jam).
