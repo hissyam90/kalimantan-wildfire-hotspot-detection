@@ -5,20 +5,19 @@ import numpy as np
 from PIL import Image
 import tensorflow as tf
 
+
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
+
 t0 = time.time()
 log("Memulai proses deteksi")
-
 img_path = sys.argv[1]
 log(f"Membaca file: {img_path}")
 img = Image.open(img_path)
 log(f"Ukuran asli citra: {img.size[0]}x{img.size[1]} piksel")
-
 img = img.resize((224, 224)).convert("RGB")
 log("Resize ke 224x224 dan konversi ke RGB")
-
 arr = np.array(img, dtype=np.float32)
 arr = tf.keras.applications.mobilenet_v2.preprocess_input(arr)
 arr = np.expand_dims(arr, axis=0)
@@ -28,20 +27,24 @@ log("Memuat model wildfire_model.h5")
 model_start = time.time()
 model = tf.keras.models.load_model("model/wildfire_model.h5")
 log(f"Model berhasil dimuat ({time.time() - model_start:.2f} detik)")
-
 labels = json.load(open("model/labels.json"))
 
 log("Menjalankan inferensi CNN")
 infer_start = time.time()
-pred = model.predict(arr, verbose=0)[0]
+pred = np.asarray(model.predict(arr, verbose=0)[0]).reshape(-1)
 log(f"Inferensi selesai ({time.time() - infer_start:.2f} detik)")
-
 idx = int(np.argmax(pred))
+predicted_label = labels[str(idx)]
+is_wildfire = predicted_label == "wildfire"
 result = {
-    "label": labels[str(idx)],
+    "label": predicted_label,
     "confidence": float(pred[idx]),
-    "probabilities": [{"label": labels[str(i)], "score": float(p)} for i, p in enumerate(pred)]
+    "probabilities": [{"label": labels[str(i)], "score": float(p)} for i, p in enumerate(pred)],
+    "model": "wildfire_rgb_cnn",
+    "modelDescription": "CNN klasifikasi gambar RGB; bukan pendeteksi koordinat hotspot.",
+    "modelInput": "RGB 224x224",
+    "interpretation": "Pola gambar lebih dekat dengan contoh wildfire pada data latihan." if is_wildfire else "Pola gambar lebih dekat dengan contoh nowildfire pada data latihan.",
+    "nextStep": "Bandingkan dengan peta hotspot dan waktu observasi sebelum mengambil tindakan." if is_wildfire else "Tetap periksa peta dan sumber lain; hasil ini bukan jaminan tidak ada api."
 }
-
 log(f"Total waktu proses: {time.time() - t0:.2f} detik")
 print("RESULT:" + json.dumps(result), flush=True)

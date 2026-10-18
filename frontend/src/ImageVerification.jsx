@@ -68,17 +68,25 @@ export default function ImageVerification() {
   };
 
   const isWildfire = result?.label === 'wildfire';
+  const resultTitle = isWildfire ? 'Terlihat seperti area terbakar' : 'Tidak terlihat seperti area terbakar';
+  const resultHelp = isWildfire
+    ? 'Gambar memiliki pola yang lebih dekat dengan contoh wildfire pada data latihan. Periksa lokasi dan waktu dengan peta hotspot.'
+    : 'Gambar memiliki pola yang lebih dekat dengan contoh nowildfire pada data latihan. Hasil ini bukan jaminan tidak ada api.';
 
   return (
     <section className="verify-panel">
-      <p className="verify-intro">Unggah gambar untuk melihat klasifikasi model RGB.</p>
+      <div className="page-intro verify-heading">
+        <p className="eyebrow">PEMERIKSAAN CITRA</p>
+        <h2>Periksa sebuah gambar</h2>
+        <p>Model membaca pola visual gambar dan memberi dua kemungkinan. Gunakan hasil ini sebagai bantuan awal, bukan bukti tunggal kebakaran.</p>
+      </div>
       <div className="verify-grid">
         <div>
           <label className="dropzone" htmlFor="file-input">
             {preview ? (
               <img src={preview} alt="Pratinjau citra" className="preview" />
             ) : (
-              <span className="dropzone-text">Pilih gambar RGB (.jpg atau .png)</span>
+              <span className="dropzone-text">Klik untuk memilih gambar (.jpg atau .png)</span>
             )}
           </label>
           <input
@@ -90,7 +98,7 @@ export default function ImageVerification() {
           />
 
           <button onClick={handleSubmit} disabled={!file || loading} className="run-button">
-            {loading ? 'Memproses' : 'Jalankan deteksi'}
+            {loading ? 'Sedang memeriksa…' : 'Periksa gambar'}
           </button>
 
           {error && <p className="error-text">{error}</p>}
@@ -99,20 +107,19 @@ export default function ImageVerification() {
             <div className={`result ${isWildfire ? 'result-alert' : 'result-clear'}`}>
               <div className="result-row">
                 <span className="result-label">Status</span>
-                <span className="result-value">
-                  {isWildfire ? 'Kelas RGB: wildfire' : 'Kelas RGB: nowildfire'}
-                </span>
+                <span className="result-value">{resultTitle}</span>
               </div>
               <div className="result-row">
                 <span className="result-label">Skor model (tidak terkalibrasi)</span>
                 <span className="result-value mono">{(result.confidence * 100).toFixed(1)}%</span>
               </div>
-              <p className="stats-note">Ini klasifikasi gambar, bukan lokasi hotspot atau konfirmasi kebakaran.</p>
+              <p className="result-explanation">{resultHelp}</p>
+              <p className="stats-note">Model ini dilatih dengan dua kelas: wildfire dan nowildfire. Skor tidak terkalibrasi.</p>
 
               <div className="bars">
                 {result.probabilities.map((p) => (
                   <div className="bar-row" key={p.label}>
-                    <span className="bar-label">{p.label}</span>
+                    <span className="bar-label">{p.label === 'wildfire' ? 'Terbakar' : 'Tidak terbakar'}</span>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${p.score * 100}%` }} data-kind={p.label} />
                     </div>
@@ -125,7 +132,7 @@ export default function ImageVerification() {
         </div>
 
         <div className="terminal">
-          <div className="terminal-header">proses backend</div>
+          <div className="terminal-header">detail pemeriksaan</div>
           <div className="terminal-body">
             {logs.length === 0 && !loading && (
               <span className="terminal-placeholder">Log proses akan muncul di sini</span>

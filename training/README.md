@@ -10,7 +10,7 @@ Input awal adalah bundle NPZ dari `viirs.py` yang dibuat dari pasangan produk VI
 
 ## Arsitektur dan training
 
-`models.py` mendefinisikan CNN Keras sendiri: tiga blok Conv2D ReLU (32, 64, 128 filter), BatchNormalization dan MaxPooling pada dua blok pertama, GlobalAveragePooling, Dropout 0,25, lalu Dense sigmoid biner. Model menerima bentuk patch dari dataset; tidak memakai ImageNet preprocessing. Adam (learning rate 1e-3) dan binary cross-entropy adalah baseline eksplisit, bukan klaim model NASA.
+`models.py` mendefinisikan CNN Keras sendiri: tiga blok Conv2D ReLU (32, 64, 128 filter), BatchNormalization, MaxPooling pada dua blok pertama, BatchNormalization dan SpatialDropout 0,2 pada blok terakhir, GlobalAveragePooling, Dropout 0,35, lalu Dense sigmoid biner. Model menerima bentuk patch dari dataset; tidak memakai ImageNet preprocessing. Adam (learning rate 1e-3) dan binary cross-entropy adalah baseline eksplisit, bukan klaim model NASA. Perubahan regularisasi ini belum berarti akurasi meningkat sebelum diuji pada test split independen.
 
 `train.py` memvalidasi manifest, seed, bentuk tensor, kelas train, menyimpan checkpoint terbaik `.keras`, early stopping, konfigurasi, checksum, dan history. `evaluate.py` membaca **test split yang tidak digunakan untuk memilih model** dan menulis accuracy, precision, recall, F1, serta confusion matrix. Fixture kecil hanya menguji kontrak, bukan bukti penelitian.
 
