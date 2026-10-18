@@ -514,6 +514,10 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .map-facts b { font-weight: 500; }
 .cities-page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; width: 100%; overflow-y: auto; }
 .city-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.city-search-label { display: block; color: var(--muted); font-size: 12px; margin: 22px 0 6px; }
+.city-search { width: min(100%, 420px); border: 1px solid var(--input-border); background: var(--panel-bg); color: var(--text); padding: 11px 12px; font: inherit; }
+.time-slider { width: 100%; accent-color: var(--accent-green); }
+.export-button { width: 100%; margin-top: 16px; }
 .city-card { border: 1px solid var(--border); background: var(--panel-bg); padding: 20px; }
 .city-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .city-card h3 { margin: 0; font-size: 17px; }
@@ -555,4 +559,13 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   .stats-panel { width: 100%; max-height: 45dvh; border-right: 0; }
   .map-area { flex: none; height: 60dvh; min-height: 320px; }
   .terminal { height: 280px; }
+  .app-header h1 { font-size: 20px; }
+  .app-header p { max-width: 270px; line-height: 1.45; }
+  .tabs { overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .stats-panel { max-height: none; padding: 20px 16px; }
+  .map-area { height: 56dvh; min-height: 300px; }
+  .map-legend { max-width: calc(100% - 24px); font-size: 11px; }
+  .city-card { padding: 16px; }
+  .city-extra { flex-wrap: wrap; }
 }

@@ -22,6 +22,12 @@ const GRID_POINTS = [
   { name: 'Tarakan', lat: 3.30, lon: 117.63 },
   { name: 'Tanjung Selor', lat: 2.84, lon: 117.37 },
   { name: 'Nunukan', lat: 4.14, lon: 117.65 },
+  { name: 'Sintang', lat: 0.07, lon: 111.49 },
+  { name: 'Putussibau', lat: 0.84, lon: 112.93 },
+  { name: 'Tamiang Layang', lat: -2.10, lon: 115.10 },
+  { name: 'Kuala Kapuas', lat: -3.01, lon: 114.39 },
+  { name: 'Tanah Grogot', lat: -1.88, lon: 116.20 },
+  { name: 'Sangatta', lat: 0.52, lon: 117.56 },
 ];
 
 let cache = null;

@@ -78,6 +78,8 @@ app.use((error, req, res, next) => {
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', service: 'wildfire-backend' }));
 
+// FIRMS adalah jalur data ringan dan tidak memuat TensorFlow/model.
+// Inferensi gambar tetap terisolasi di /api/predict agar dapat dipindahkan ke service lain nanti.
 app.get('/api/hotspots', require('./routes/hotspots'));
 app.get('/api/wind', require('./routes/wind'));
 app.get('/api/model-status', require('./routes/modelStatus'));

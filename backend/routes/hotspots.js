@@ -5,7 +5,7 @@ const COVERAGE = { west: 108, south: -4.5, east: 119.5, north: 7.5 };
 const PRODUCTS = ['VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'];
 const FETCH_DAYS = 3;
 const CACHE_DURATION = 10 * 60 * 1000;
-const WINDOW_HOURS = { 1: 24, 2: 48 };
+const WINDOW_HOURS = { 1: 24, 2: 48, 3: 72 };
 let cache = null;
 let pending = null;
 
@@ -72,12 +72,16 @@ async function handler(req, res) {
   const requested = Number.parseInt(req.query.days, 10);
   const days = WINDOW_HOURS[requested] ? requested : 1;
   const hours = WINDOW_HOURS[days];
+  const confidence = String(req.query.confidence || 'all').toLowerCase();
+  const minFrp = Number(req.query.minFrp);
   if (!process.env.FIRMS_KEY && !cache) return res.status(503).json({ error: 'FIRMS_KEY belum dikonfigurasi', code: 'FIRMS_NOT_CONFIGURED' });
   try {
     const { rows, fetchedAt, stale, sources } = await loadRows();
     const now = Date.now();
     const windowStart = now - hours * 3600 * 1000;
-    const hotspots = rows.filter((row) => row.ts >= windowStart).map((row) => ({
+    const hotspots = rows.filter((row) => row.ts >= windowStart
+      && (confidence === 'all' || row.confidence === confidence)
+      && (!Number.isFinite(minFrp) || (row.frp != null && row.frp >= minFrp))).map((row) => ({
       lat: row.lat, lon: row.lon,
       date: row.date, time: row.time, satellite: row.satellite,
       confidence: row.confidence, frp: row.frp,
@@ -85,7 +89,7 @@ async function handler(req, res) {
     }));
     return res.json({ days, hours, source: 'NASA FIRMS VIIRS NOAA-20/NOAA-21 NRT', dataType: 'active-fire point observations',
       coverage: COVERAGE, confidenceNote: 'Confidence adalah kategori deteksi FIRMS, bukan probabilitas pasti dan bukan confidence CNN.',
-      total: hotspots.length, fetchedAt, windowStart: new Date(windowStart).toISOString(), windowEnd: new Date(now).toISOString(),
+      total: hotspots.length, filters: { confidence, minFrp: Number.isFinite(minFrp) ? minFrp : null }, fetchedAt, windowStart: new Date(windowStart).toISOString(), windowEnd: new Date(now).toISOString(),
       stale: Boolean(stale), sources, hotspots });
   } catch (error) { return res.status(502).json({ error: 'Pengambilan data NASA FIRMS gagal', code: 'FIRMS_FETCH_FAILED', stale: Boolean(cache) }); }
 }

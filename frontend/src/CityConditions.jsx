@@ -22,6 +22,7 @@ export default function CityConditions() {
   const [cities, setCities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -39,10 +40,12 @@ export default function CityConditions() {
         <h2>Udara dan cuaca di Kalimantan</h2>
         <p>Bandingkan AQI WAQI dan kondisi cuaca di kota-kota pantauan Kalimantan. PM2.5 dan PM10 adalah konsentrasi partikulat dalam µg/m³.</p>
       </div>
+      <label className="city-search-label" htmlFor="city-search">Cari kota</label>
+      <input id="city-search" className="city-search" type="search" placeholder="Contoh: Samarinda" value={search} onChange={(event) => setSearch(event.target.value)} />
       {loading && <p className="muted" role="status">Memuat kondisi kota…</p>}
       {error && <p className="error-text">Data kota belum tersedia. Pastikan backend dan WAQI_KEY atau OWM_KEY aktif.</p>}
       <div className="city-grid">
-        {cities.map((city) => {
+        {cities.filter((city) => city.name.toLocaleLowerCase('id-ID').includes(search.toLocaleLowerCase('id-ID'))).map((city) => {
           const air = city.airQuality;
           return (
             <article className="city-card" key={city.name}>
@@ -60,6 +63,7 @@ export default function CityConditions() {
         })}
       </div>
       {!loading && !error && cities.length === 0 && <p className="muted">Belum ada data kota.</p>}
+      {!loading && !error && cities.length > 0 && cities.filter((city) => city.name.toLocaleLowerCase('id-ID').includes(search.toLocaleLowerCase('id-ID'))).length === 0 && <p className="muted">Kota tidak ditemukan.</p>}
     </section>
   );
 }
