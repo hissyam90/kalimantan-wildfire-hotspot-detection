@@ -1,38 +1,137 @@
-# Panduan penjelasan proyek
+# Pantau Karhutla Kalimantan
 
-Dokumen ini membantu menjelaskan proyek tanpa mencampuradukkan data observasi NASA FIRMS dan hasil CNN.
+## Panduan presentasi proyek
 
-## Inti sistem
+Dokumen ini menjadi acuan singkat untuk menjelaskan tujuan, cara kerja, sumber data, hasil yang ditampilkan, dan batasan aplikasi kepada dosen atau penguji.
 
-1. **NASA FIRMS** menyediakan titik observasi active fire. Backend mengambil dan memfilter data tersebut di [`backend/routes/hotspots.js`](../backend/routes/hotspots.js).
-2. **Peta** menampilkan titik FIRMS secara langsung sebagai observasi, bukan titik yang dibuat oleh CNN. UI dan statistik ada di [`frontend/src/HotspotMap.jsx`](../frontend/src/HotspotMap.jsx).
-3. **Model RGB lama** menerima gambar yang di-upload. Proses resize, preprocessing, dan inference ada di [`backend/python/infer.py`](../backend/python/infer.py), sedangkan file model ada di [`backend/model/wildfire_model.h5`](../backend/model/wildfire_model.h5).
-4. **AQI dan cuaca** diambil dari OpenWeatherMap pada titik regional. Implementasinya ada di [`backend/routes/wind.js`](../backend/routes/wind.js). AQI ini adalah konteks regional, bukan pengukuran tepat di setiap hotspot.
-5. **CNN patch VIIRS** adalah pipeline penelitian terpisah. Arsitekturnya ada di [`training/models.py`](../training/models.py), training di [`training/train.py`](../training/train.py), dan persiapan datanya di [`training/prepare_dataset.py`](../training/prepare_dataset.py).
+---
 
-## Perbedaan model Kaggle dan pipeline CNN patch
+## 1. Gagasan utama
 
-| Hal | Model RGB dari notebook Kaggle | CNN patch VIIRS proyek |
-|---|---|---|
-| Asal | Notebook Kaggle yang dimodifikasi lalu diekspor menjadi `.h5` | Implementasi baseline baru di folder `training/` |
-| Input | Satu gambar RGB biasa | Patch citra termal VIIRS I04/I05 |
-| Output | Kelas `wildfire`/`nowildfire` | Kelas referensi `FIRMS_match`/`reference_negative` |
-| Lokasi | Tidak menghasilkan koordinat | Patch memiliki metadata waktu dan lokasi |
-| Peran di aplikasi | Dipakai endpoint `POST /api/predict` | Belum dihubungkan ke endpoint produksi |
-| Status | Eksperimen kompatibilitas | Baseline penelitian, belum tervalidasi lapangan |
+**Pantau Karhutla Kalimantan** adalah aplikasi web untuk membantu pengguna melihat tiga jenis informasi yang saling melengkapi:
 
-Penjelasan sederhana: **model Kaggle melihat gambar dan menebak kelas; pipeline VIIRS mencoba menghubungkan patch satelit yang memiliki lokasi/waktu dengan observasi FIRMS.** Keduanya sama-sama memakai CNN, tetapi datanya, tujuan, dan alur penggunaannya berbeda.
+1. **Peta hotspot**: lokasi observasi panas dari satelit NASA FIRMS.
+2. **Kondisi kota**: cuaca dan kualitas udara regional di beberapa kota Kalimantan.
+3. **Verifikasi citra**: bantuan klasifikasi gambar menggunakan CNN dua kelas.
 
-## Jika ditanya “mengapa CNN tidak membuat titik hotspot?”
+Aplikasi ini bukan sistem pemadam kebakaran dan bukan pengganti laporan resmi. Tujuannya adalah membuat informasi awal lebih mudah dibaca serta membantu pengguna menentukan informasi apa yang perlu diperiksa berikutnya.
 
-Jawaban: “Karena endpoint peta mengambil koordinat dari NASA FIRMS. CNN RGB hanya memproses file gambar yang di-upload, sehingga outputnya label klasifikasi dan bukan koordinat. Pemisahan ini sengaja dibuat agar prediksi gambar tidak dianggap sebagai observasi satelit.”
+## 2. Masalah yang ingin dibantu
 
-## Jika ditanya “apa yang belum selesai?”
+Informasi karhutla sering tersebar di beberapa sumber dan memakai istilah teknis yang sulit dipahami pengguna umum. Selain itu, titik panas satelit, kualitas udara, dan klasifikasi gambar sering keliru dianggap sebagai satu data yang sama.
 
-Jawaban: “Pipeline teknis dan pengujian kontraknya sudah dibuat, tetapi saya belum mengklaim hasil ilmiah karena dataset mentah berlisensi, provenance model, metrik test, dan validasi lapangan harus dibuktikan terlebih dahulu. Karena itu model RGB diberi label eksperimental dan CNN patch belum dipakai sebagai layanan produksi.”
+Proyek ini memisahkan ketiganya secara jelas:
 
-## AQI
+- **NASA FIRMS** menjawab: “Di mana satelit mendeteksi titik panas?”
+- **OpenWeatherMap** membantu menjawab: “Bagaimana konteks cuaca dan udara di sekitar kota?”
+- **CNN** menjawab: “Apakah pola pada gambar lebih mirip contoh area terbakar atau tidak?”
 
-Endpoint [`backend/routes/wind.js`](../backend/routes/wind.js) meminta data cuaca dan Air Pollution API OpenWeatherMap dengan `OWM_KEY`. UI menampilkan AQI skala 1–5 dan PM2.5 pada popup hotspot berdasarkan titik regional terdekat. Jika API/key tidak tersedia, UI menampilkan status tidak tersedia; aplikasi tidak mengarang nilai AQI.
+## 3. Fitur aplikasi
 
-AQI tidak boleh dijelaskan sebagai pengukuran kualitas udara tepat di koordinat hotspot. Untuk peringatan resmi, gunakan sumber kualitas udara pemerintah/otoritas setempat.
+### A. Peta hotspot
+
+- Menampilkan observasi NASA FIRMS VIIRS untuk wilayah Kalimantan.
+- Pengguna dapat memilih rentang 24 atau 48 jam.
+- Sidebar menampilkan jumlah titik, observasi terbaru, rentang waktu, dan sumber data.
+- Klik titik untuk melihat koordinat, waktu pengamatan, dan satelit yang digunakan.
+- Animasi asap adalah **ilustrasi arah pergerakan berdasarkan data angin**, bukan peta konsentrasi asap yang terukur.
+
+### B. Kondisi kota
+
+Kartu kota menampilkan suhu, deskripsi cuaca, kelembapan, kecepatan angin, PM2.5, PM10, dan indeks udara OpenWeatherMap.
+
+Indeks OpenWeatherMap memiliki skala **1–5**, bukan angka AQI 0–500 seperti yang dapat ditemukan pada layanan lain. Karena itu, aplikasi tidak boleh menyebut indeks ini sebagai data IQAir atau BMKG.
+
+### C. Verifikasi citra
+
+- Pengguna mengunggah gambar JPG/PNG.
+- Backend mengubah ukuran dan memproses gambar dengan model CNN.
+- Hasil ditampilkan sebagai dua kemungkinan: “terlihat seperti area terbakar” atau “tidak terlihat seperti area terbakar”.
+- Skor adalah tingkat kecocokan terhadap data latihan dan belum tentu terkalibrasi sebagai probabilitas.
+- Hasil tidak memberikan koordinat, luas api, tingkat bahaya, atau kepastian bahwa api benar-benar ada.
+
+## 4. Sumber data dan alur sistem
+
+```text
+NASA FIRMS ───────┐
+                  ├─ Backend Express ── Frontend React
+OpenWeatherMap ───┘          │
+                             └─ CNN Python untuk /api/predict
+```
+
+Endpoint utama:
+
+| Endpoint | Kegunaan |
+|---|---|
+| `GET /api/hotspots` | Mengambil dan menyaring observasi NASA FIRMS |
+| `GET /api/wind` | Mengambil cuaca dan Air Pollution API OpenWeatherMap |
+| `POST /api/predict` | Memproses gambar melalui model CNN |
+| `GET /api/model-status` | Memeriksa kesiapan model |
+
+Backend menyimpan cache sementara agar aplikasi tidak meminta data eksternal berulang kali pada setiap pemuatan halaman.
+
+## 5. Cara membaca hasil dengan benar
+
+Urutan penggunaan yang disarankan:
+
+1. Buka **Peta hotspot** untuk melihat lokasi dan waktu observasi.
+2. Buka **Kondisi kota** untuk melihat konteks cuaca dan partikulat di kota-kota sekitar.
+3. Jika memiliki gambar, gunakan **Verifikasi citra** sebagai pemeriksaan tambahan.
+4. Bandingkan waktu, lokasi, cuaca, dan sumber resmi sebelum menyimpulkan adanya kebakaran.
+
+Contoh kalimat yang aman saat presentasi:
+
+> “Aplikasi ini tidak menyatakan bahwa setiap titik adalah kebakaran. Sistem menggabungkan observasi satelit, konteks cuaca dan udara, serta klasifikasi citra agar pengguna memiliki dasar pemeriksaan awal yang lebih jelas.”
+
+## 6. Batasan penelitian
+
+- NASA FIRMS adalah observasi satelit, bukan pengukuran langsung dari lapangan.
+- Satu titik panas tidak menjelaskan ukuran api, penyebab, atau tingkat bahayanya.
+- Data OpenWeatherMap bersifat regional pada koordinat kota dan tidak menggantikan stasiun pemantauan kualitas udara.
+- API IQAir/BMKG belum terintegrasi; aplikasi tidak mengklaim data OWM sebagai data IQAir/BMKG.
+- Model produksi masih memiliki dua kelas: `wildfire` dan `nowildfire`.
+- Perubahan arsitektur CNN belum dapat disebut meningkatkan akurasi sebelum training ulang, test split independen, confusion matrix, dan metrik per kelas dilakukan.
+- Animasi asap pada peta hanya visualisasi arah angin, bukan simulasi dispersi atmosfer.
+
+## 7. Konfigurasi dan demo lokal
+
+Backend membutuhkan environment variable:
+
+```env
+FIRMS_KEY=...
+OWM_KEY=...
+PYTHON_BIN=python
+```
+
+Jalankan backend:
+
+```powershell
+cd backend
+npm install
+node server.js
+```
+
+Jalankan frontend pada terminal lain:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+## 8. Alur demo untuk dosen
+
+1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
+2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
+3. Tunjukkan animasi asap, lalu tekankan bahwa itu ilustrasi arah angin.
+4. Buka **Kondisi kota** dan tunjukkan perbedaan antara indeks OWM 1–5 dan AQI 0–500.
+5. Buka **Verifikasi citra**, unggah satu gambar, lalu jelaskan hasil CNN sebagai bantuan awal.
+6. Tutup dengan batasan sistem dan rencana validasi model.
+
+## 9. Pengembangan berikutnya
+
+- Integrasi sumber kualitas udara resmi dengan lisensi dan API key yang sah.
+- Penambahan riwayat grafik PM2.5 dan PM10.
+- Pengujian model pada dataset berlabel dengan pemisahan train/validation/test yang independen.
+- Evaluasi precision, recall, F1-score, confusion matrix, dan kalibrasi skor.
+- Validasi visual dengan petugas atau data lapangan sebelum digunakan untuk keputusan operasional.

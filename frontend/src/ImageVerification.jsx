@@ -132,7 +132,7 @@ export default function ImageVerification() {
         </div>
 
         <div className="terminal">
-          <div className="terminal-header">proses pemeriksaan</div>
+          <div className="terminal-header"><span>ringkasan proses</span><span className="terminal-status">{loading ? 'berjalan' : result ? 'selesai' : 'menunggu gambar'}</span></div>
           <div className="terminal-body">
             {logs.length === 0 && !loading && (
               <span className="terminal-placeholder">Log proses akan muncul di sini</span>
