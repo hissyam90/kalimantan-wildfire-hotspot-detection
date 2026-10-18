@@ -1,0 +1,1 @@
+"""Reproducible CNN training pipeline for georeferenced satellite patches."""

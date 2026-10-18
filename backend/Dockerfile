@@ -8,14 +8,14 @@ WORKDIR /app
 
 # Install dependency Python dulu (lebih jarang berubah, biar cache build lebih cepat)
 COPY python/requirements.txt ./python/requirements.txt
-RUN pip3 install --break-system-packages -r python/requirements.txt
+RUN pip3 install --break-system-packages --no-cache-dir -r python/requirements.txt
 
 # Install dependency Node
 COPY package*.json ./
-RUN npm install --production
+RUN npm ci --omit=dev
 
 # Copy semua source code
 COPY . .
 
-EXPOSE 10000
+EXPOSE 5000
 CMD ["node", "server.js"]

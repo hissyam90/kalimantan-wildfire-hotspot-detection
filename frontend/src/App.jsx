@@ -14,7 +14,7 @@ function App() {
         <div className="app-header-top">
           <div>
             <h1>Deteksi dini titik panas</h1>
-            <p>Pemantauan potensi karhutla di Kalimantan Timur berbasis citra satelit</p>
+            <p>Pemantauan potensi karhutla di Kalimantan berbasis citra satelit</p>
           </div>
           <button className="theme-toggle" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
             {theme === 'dark' ? 'Mode terang' : 'Mode gelap'}
@@ -23,12 +23,12 @@ function App() {
       </header>
 
       <nav className="tabs">
-        <button className={tab === 'map' ? 'tab active' : 'tab'} onClick={() => setTab('map')}>Peta hotspot</button>
-        <button className={tab === 'verify' ? 'tab active' : 'tab'} onClick={() => setTab('verify')}>Verifikasi citra</button>
+        <button aria-pressed={tab === 'map'} className={tab === 'map' ? 'tab active' : 'tab'} onClick={() => setTab('map')}>Peta FIRMS · Kalimantan</button>
+        <button aria-pressed={tab === 'verify'} className={tab === 'verify' ? 'tab active' : 'tab'} onClick={() => setTab('verify')}>Klasifikasi RGB · eksperimen</button>
       </nav>
 
       <main className={tab === 'map' ? 'content content-full' : 'content content-verify'}>
-        {tab === 'map' ? <HotspotMap theme={theme} /> : <ImageVerification />}
+        {tab === 'map' ? <HotspotMap /> : <ImageVerification />}
       </main>
       <Analytics />
     </div>

@@ -6,3 +6,11 @@ __pycache__/
 venv/
 frontend/dist/
 .DS_Store
+training/artifacts/
+data/raw/
+data/prepared/
+*.keras
+*.weights.h5
+*.npz
+*.npy
+*.tflite

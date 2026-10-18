@@ -20,15 +20,24 @@ let cache = null;
 let cacheTime = 0;
 
 module.exports = async (req, res) => {
+  if (!OWM_KEY) {
+    return res.status(503).json({ error: 'OWM_KEY belum dikonfigurasi', code: 'OWM_NOT_CONFIGURED' });
+  }
   if (cache && Date.now() - cacheTime < CACHE_DURATION) {
-    return res.json(cache);
+    return res.json({ ...cache, stale: false });
   }
 
   try {
     const results = await Promise.all(
       GRID_POINTS.map(async (p) => {
         const url = `https://api.openweathermap.org/data/2.5/weather?lat=${p.lat}&lon=${p.lon}&appid=${OWM_KEY}&units=metric`;
-        const r = await axios.get(url);
+        const airUrl = `https://api.openweathermap.org/data/2.5/air_pollution?lat=${p.lat}&lon=${p.lon}&appid=${OWM_KEY}`;
+        const [r, air] = await Promise.all([
+          axios.get(url, { timeout: 25000 }),
+          axios.get(airUrl, { timeout: 25000 }),
+        ]);
+        const airData = air.data.list?.[0];
+        const components = airData?.components || {};
         return {
           name: p.name,
           lat: p.lat,
@@ -38,16 +47,22 @@ module.exports = async (req, res) => {
           temp: r.data.main?.temp ?? null,
           humidity: r.data.main?.humidity ?? null,
           description: r.data.weather?.[0]?.description ?? '-',
+          airQuality: airData ? {
+            aqi: airData.main?.aqi ?? null,
+            pm2_5: components.pm2_5 ?? null,
+            pm10: components.pm10 ?? null,
+            fetchedAt: airData.dt ? new Date(airData.dt * 1000).toISOString() : null,
+          } : null,
         };
       })
     );
-    const result = { grid: results };
+    const result = { grid: results, fetchedAt: new Date().toISOString(), stale: false, context: 'regional' };
     cache = result;
     cacheTime = Date.now();
     res.json(result);
   } catch (err) {
     console.error(err.message);
-    if (cache) return res.json(cache);
+    if (cache) return res.json({ ...cache, stale: true });
     res.status(500).json({ error: 'Gagal mengambil data angin' });
   }
 };

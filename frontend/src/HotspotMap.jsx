@@ -40,7 +40,8 @@ function degToCompass(deg) {
 function confidenceLabel(c) {
   if (c === 'h' || c === 'high') return 'Tinggi';
   if (c === 'l' || c === 'low') return 'Rendah';
-  return 'Sedang';
+  if (c === 'n' || c === 'nominal') return 'Nominal';
+  return 'Tidak diketahui';
 }
 
 function daynightLabel(d) {
@@ -49,13 +50,17 @@ function daynightLabel(d) {
   return '-';
 }
 
+function aqiLabel(aqi) {
+  return ({ 1: 'Baik', 2: 'Sedang', 3: 'Kurang sehat', 4: 'Tidak sehat', 5: 'Sangat tidak sehat' })[aqi] || 'Tidak tersedia';
+}
+
 function formatTime(t) {
   const p = String(t || '').padStart(4, '0');
   return `${p.slice(0, 2)}:${p.slice(2)} UTC`;
 }
 
 function formatWindow(startIso, endIso) {
-  const opts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' };
+  const opts = { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' };
   const f = (iso) => new Date(iso).toLocaleString('id-ID', opts);
   return `${f(startIso)} - ${f(endIso)}`;
 }
@@ -93,28 +98,33 @@ function HotspotPopup({ h, windGrid }) {
 
   return (
     <div className="hotspot-popup">
-      <div className="popup-row"><span>Kecerahan</span><span>{h.brightness}</span></div>
+      <div className="popup-row"><span>Brightness temperature I4 (K)</span><span>{h.brightness}</span></div>
       <div className="popup-row"><span>Daya radiatif api</span><span>{isNaN(h.frp) ? '-' : `${h.frp} MW`}</span></div>
-      <div className="popup-row"><span>Keyakinan</span><span>{confidenceLabel(h.confidence)}</span></div>
-      <div className="popup-row"><span>Waktu deteksi</span><span>{daynightLabel(h.daynight)}</span></div>
+      <div className="popup-row"><span>Confidence FIRMS (bukan CNN)</span><span>{confidenceLabel(h.confidence)}</span></div>
+      <div className="popup-row"><span>Mode siang/malam</span><span>{daynightLabel(h.daynight)}</span></div>
       <div className="popup-row"><span>Satelit</span><span>{h.satellite || '-'}</span></div>
-      <div className="popup-row"><span>Tanggal</span><span>{h.date} {formatTime(h.time)}</span></div>
+      {nearest?.airQuality && <div className="popup-row"><span>AQI regional terdekat</span><span>{aqiLabel(nearest.airQuality.aqi)}{nearest.airQuality.pm2_5 == null ? '' : ` · PM2.5 ${nearest.airQuality.pm2_5} µg/m³`}</span></div>}
+      <div className="popup-row"><span>Observasi UTC</span><span>{h.date} {formatTime(h.time)}</span></div>
+      <p>Confidence FIRMS adalah kategori deteksi, bukan probabilitas kebakaran.</p>
 
       {nearest && (
         <>
           <div className="popup-divider" />
+          <p>Cuaca regional, bukan pengukuran pada titik hotspot.</p>
           <div className="popup-row"><span>Wilayah acuan</span><span>{nearest.name} (±{Math.round(dist)} km)</span></div>
           <div className="popup-row"><span>Suhu</span><span>{nearest.temp != null ? `${nearest.temp}°C` : '-'}</span></div>
           <div className="popup-row"><span>Kelembapan</span><span>{nearest.humidity != null ? `${nearest.humidity}%` : '-'}</span></div>
           <div className="popup-row"><span>Cuaca</span><span>{nearest.description || '-'}</span></div>
           <div className="popup-row"><span>Arah angin</span><span>{degToCompass(nearest.windDeg)} ({nearest.windSpeed} m/s)</span></div>
+          <div className="popup-row"><span>AQI regional</span><span>{nearest.airQuality?.aqi ? `${nearest.airQuality.aqi}/5` : 'Tidak tersedia'}</span></div>
+          <div className="popup-row"><span>PM2.5</span><span>{nearest.airQuality?.pm2_5 != null ? `${nearest.airQuality.pm2_5} µg/m³` : 'Tidak tersedia'}</span></div>
         </>
       )}
     </div>
   );
 }
 
-export default function HotspotMap({ theme }) {
+export default function HotspotMap() {
   const [days, setDays] = useState(1);
   const [hotspots, setHotspots] = useState([]);
   const [windGrid, setWindGrid] = useState([]);
@@ -123,14 +133,13 @@ export default function HotspotMap({ theme }) {
   const [stale, setStale] = useState(false);
   const [fetchedAt, setFetchedAt] = useState(null);
   const [windowInfo, setWindowInfo] = useState(null);
+  const [sources, setSources] = useState([]);
   const [reloadKey, setReloadKey] = useState(0);
-  const [smokeEnabled, setSmokeEnabled] = useState(true);
+  const [smokeEnabled, setSmokeEnabled] = useState(false);
+  const [windStatus, setWindStatus] = useState('Memuat konteks cuaca regional…');
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(false);
-    setWindowInfo(null);
 
     axios.get(`${API_URL}/api/hotspots`, { params: { days }, timeout: 30000 })
       .then((res) => {
@@ -138,12 +147,14 @@ export default function HotspotMap({ theme }) {
         setHotspots(res.data.hotspots);
         setFetchedAt(res.data.fetchedAt || null);
         setStale(Boolean(res.data.stale));
+        setSources(res.data.sources || []);
         setWindowInfo({ start: res.data.windowStart, end: res.data.windowEnd });
       })
       .catch((err) => {
         if (cancelled) return;
         console.error('Gagal ambil hotspot:', err.message);
         setHotspots([]);
+        setSources([]);
         setError(true);
       })
       .finally(() => {
@@ -154,9 +165,15 @@ export default function HotspotMap({ theme }) {
   }, [days, reloadKey]);
 
   useEffect(() => {
-    axios.get(`${API_URL}/api/wind`)
-      .then((res) => setWindGrid(res.data.grid))
-      .catch((err) => console.error('Gagal ambil data angin:', err.message));
+    let cancelled = false;
+    axios.get(`${API_URL}/api/wind`, { timeout: 30000 })
+      .then((res) => {
+        if (cancelled) return;
+        setWindGrid(res.data.grid);
+        setWindStatus(res.data.stale ? 'Cuaca dan AQI regional usang dari cache.' : 'Cuaca dan AQI regional tersedia; bukan sensor tepat di hotspot.');
+      })
+      .catch(() => { if (!cancelled) setWindStatus('Cuaca/AQI regional tidak tersedia; animasi asap tidak ditampilkan.'); });
+    return () => { cancelled = true; };
   }, []);
 
   const stats = useMemo(() => {
@@ -215,7 +232,7 @@ export default function HotspotMap({ theme }) {
           <select
             className="period-select"
             value={days}
-            onChange={(e) => setDays(Number(e.target.value))}
+            onChange={(e) => { setLoading(true); setError(false); setWindowInfo(null); setHotspots([]); setDays(Number(e.target.value)); }}
           >
             <option value={1}>24 jam terakhir</option>
             <option value={2}>48 jam terakhir</option>
@@ -224,16 +241,16 @@ export default function HotspotMap({ theme }) {
         
         {windowInfo && (
           <p className="period-range">
-            {formatWindow(windowInfo.start, windowInfo.end)} (waktu setempat)
+            {formatWindow(windowInfo.start, windowInfo.end)}
           </p>
         )}
 
         {loading ? (
-          <p className="muted">Memuat data...</p>
+          <p className="muted" role="status">Memuat observasi FIRMS...</p>
         ) : error ? (
           <div>
-            <p className="error-text">Gagal memuat data titik panas dari server.</p>
-            <button className="retry-button" onClick={() => setReloadKey((k) => k + 1)}>
+            <p className="error-text" role="alert">Gagal memuat data titik panas. Pastikan backend aktif dan FIRMS_KEY terkonfigurasi. Kegagalan ini bukan berarti tidak ada hotspot.</p>
+            <button className="retry-button" onClick={() => { setLoading(true); setError(false); setWindowInfo(null); setHotspots([]); setReloadKey((k) => k + 1); }}>
               Coba lagi
             </button>
           </div>
@@ -241,12 +258,12 @@ export default function HotspotMap({ theme }) {
           <>
             {stale && (
               <p className="muted" style={{ marginBottom: 12 }}>
-                NASA sedang tidak merespons, menampilkan data tersimpan terakhir.
+                Data usang dari cache: pembaruan FIRMS gagal. Bukan data live.
               </p>
             )}
             {hotspots.length === 0 && (
               <p className="muted" style={{ marginBottom: 12 }}>
-                Tidak ada titik panas terdeteksi pada periode ini. Bisa berarti wilayah sedang bersih, atau data satelit terbaru belum tersedia dari NASA.
+                Tidak ada observasi hotspot pada periode ini. Ini bukan bukti wilayah bebas kebakaran; data mungkin belum tersedia atau belum dilaporkan oleh satelit NASA.
               </p>
             )}
 
@@ -264,19 +281,33 @@ export default function HotspotMap({ theme }) {
               <div className="stat-row">
                 <span className="result-label">Data diambil</span>
                 <span className="result-value mono">
-                  {new Date(fetchedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(fetchedAt).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC', timeZoneName: 'short' })}
                 </span>
               </div>
             )}
 
+            {sources.length > 0 && (
+              <div className="stat-row">
+                <span className="result-label">Sumber FIRMS</span>
+                <span className="result-value mono">{sources.filter((source) => source.status === 'available').length}/{sources.length} aktif</span>
+              </div>
+            )}
+
             <label className="toggle-row">
-              <span>Animasi asap</span>
+              <span>Animasi asap indikatif</span>
               <input
                 type="checkbox"
                 checked={smokeEnabled}
                 onChange={(e) => setSmokeEnabled(e.target.checked)}
               />
             </label>
+            <p className="toggle-hint">Bukan simulasi dispersi asap atau prediksi kualitas udara. Animasi menggunakan angin regional.</p>
+            <p className="stats-note" role="status">{windStatus}</p>
+            <p className="stats-note">Cakupan dashboard: Kalimantan/Borneo dan sekitarnya, bukan hanya Kalimantan Timur. Cache FIRMS berlaku 10 menit; NRT bukan observasi kontinu.</p>
+            <ul className="legend" aria-label="Status sumber FIRMS">
+              {sources.map((source) => <li key={source.product}>{source.product}: {source.status === 'available' ? 'tersedia saat pengambilan' : 'gagal — cakupan data parsial'}</li>)}
+            </ul>
+            <p className="stats-note">Confidence FIRMS adalah kategori deteksi (tinggi, nominal, rendah), bukan probabilitas terkalibrasi dan bukan confidence CNN.</p>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
             <div className="chart-box">
@@ -313,7 +344,7 @@ export default function HotspotMap({ theme }) {
             </div>
 
             <p className="stats-note">
-              Sumber titik panas: NASA FIRMS (VIIRS NRT). Cuaca & arah angin: OpenWeatherMap,
+              Sumber titik panas: NASA FIRMS (VIIRS NRT), bukan prediksi CNN. Brightness temperature bukan suhu api langsung; FRP adalah daya radiatif (MW). Cuaca, AQI & arah angin: OpenWeatherMap,
               dari 10 titik referensi regional terdekat.
             </p>
           </>
