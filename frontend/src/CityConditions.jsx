@@ -37,10 +37,10 @@ export default function CityConditions() {
       <div className="page-intro">
         <p className="eyebrow">KONDISI KOTA</p>
         <h2>Udara dan cuaca di Kalimantan</h2>
-        <p>Bandingkan AQI resmi IQAir dan kondisi cuaca di kota-kota pantauan Kalimantan. AQI memakai skala US AQI; PM2.5 dan PM10 adalah konsentrasi partikulat dalam µg/m³.</p>
+        <p>Bandingkan AQI WAQI dan kondisi cuaca di kota-kota pantauan Kalimantan. PM2.5 dan PM10 adalah konsentrasi partikulat dalam µg/m³.</p>
       </div>
       {loading && <p className="muted" role="status">Memuat kondisi kota…</p>}
-      {error && <p className="error-text">Data kota belum tersedia. Pastikan backend dan IQAIR_KEY atau OWM_KEY aktif.</p>}
+      {error && <p className="error-text">Data kota belum tersedia. Pastikan backend dan WAQI_KEY atau OWM_KEY aktif.</p>}
       <div className="city-grid">
         {cities.map((city) => {
           const air = city.airQuality;
@@ -49,12 +49,12 @@ export default function CityConditions() {
                <div className="city-card-top"><div><h3>{city.name}</h3><span>{city.description || 'Cuaca tidak tersedia'}</span></div><span className={`air-badge ${aqiClass(air?.aqi)}`}>{aqiLabel(air?.aqi)}</span></div>
               <div className="city-temperature">{city.temp == null ? '—' : `${Math.round(city.temp)}°`}<small> C</small><span className="weather-context">kelembapan {city.humidity == null ? '—' : `${city.humidity}%`}</span></div>
                <div className="city-metrics">
-                 <div><span>IQAir AQI</span><strong>{air?.aqi ?? '—'}</strong><small>{air ? 'US AQI' : 'tidak tersedia'}</small></div>
+                  <div><span>WAQI AQI</span><strong>{air?.aqi ?? '—'}</strong><small>{air ? 'indeks WAQI' : 'tidak tersedia'}</small></div>
                 <div><span>PM2.5</span><strong>{air?.pm2_5 ?? '—'}</strong><small>µg/m³</small></div>
                 <div><span>PM10</span><strong>{air?.pm10 ?? '—'}</strong><small>µg/m³</small></div>
               </div>
                <div className="city-extra"><span>Angin {city.windSpeed == null ? '—' : `${(city.windSpeed * 3.6).toFixed(1)} km/jam`}</span><span>Stasiun {air?.station || 'tidak tersedia'}</span></div>
-               <p className="city-updated">Sumber udara: {air?.source || 'IQAir tidak tersedia'} · {formatDate(air?.fetchedAt)} · cuaca: OpenWeatherMap</p>
+                <p className="city-updated">Sumber udara: {air?.source || 'WAQI tidak tersedia'} · {formatDate(air?.fetchedAt)} · cuaca: OpenWeatherMap</p>
             </article>
           );
         })}

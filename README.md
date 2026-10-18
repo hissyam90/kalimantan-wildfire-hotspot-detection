@@ -18,7 +18,7 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 ## Fitur Utama
 * Pemetaan interaktif observasi titik panas di wilayah Kalimantan.
 * Penarikan data titik api secara real-time dari satelit NASA FIRMS (VIIRS NRT).
-* Kondisi cuaca dan AQI US IQAir untuk 16 kota pantauan.
+* Kondisi cuaca dan AQI WAQI untuk 17 kota pantauan.
 * Verifikasi pola citra dengan CNN RGB sebagai screening awal, bukan bukti kebakaran.
 
 ## Tech Stack
@@ -38,7 +38,7 @@ node server.js
 ```bash
 cd frontend
 npm install
-# Buat file .env dan tambahkan URL backend lokal: VITE_API_URL=http://localhost:8000
+# Buat file .env dan tambahkan URL backend lokal: VITE_API_URL=http://localhost:5000
 npm run dev
 ```
 
@@ -47,7 +47,7 @@ npm run dev
 <pre>
 1. <b>NASA FIRMS      :</b> <a href="https://firms.modaps.eosdis.nasa.gov/api/map_key" target="_blank">https://firms.modaps.eosdis.nasa.gov/api/map_key</a>
 2. <b>OpenWeatherMap  :</b> <a href="https://openweathermap.org" target="_blank">https://openweathermap.org</a>
-3. <b>IQAir AirVisual :</b> <a href="https://www.iqair.com/air-pollution-data-api" target="_blank">https://www.iqair.com/air-pollution-data-api</a>
+3. <b>WAQI :</b> <a href="https://aqicn.org/api/" target="_blank">https://aqicn.org/api/</a>
 </pre>
 
 #

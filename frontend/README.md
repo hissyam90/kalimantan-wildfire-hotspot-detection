@@ -1,6 +1,6 @@
 # Frontend Pantau Karhutla Kalimantan
 
-Frontend React/Vite ini menampilkan peta observasi NASA FIRMS, kondisi cuaca dan AQI IQAir untuk 16 kota, serta verifikasi citra dengan CNN RGB.
+Frontend React/Vite ini menampilkan peta observasi NASA FIRMS, kondisi cuaca dan AQI WAQI untuk 17 kota, serta verifikasi citra dengan CNN RGB.
 
 ## Menjalankan
 

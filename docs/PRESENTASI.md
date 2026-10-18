@@ -11,7 +11,7 @@ Dokumen ini menjadi acuan singkat untuk menjelaskan tujuan, cara kerja, sumber d
 **Pantau Karhutla Kalimantan** adalah aplikasi web untuk membantu pengguna melihat tiga jenis informasi yang saling melengkapi:
 
 1. **Peta hotspot**: lokasi observasi panas dari satelit NASA FIRMS.
-2. **Kondisi kota**: cuaca dan AQI US dari IQAir di 16 kota pantauan Kalimantan.
+2. **Kondisi kota**: cuaca dan AQI dari WAQI di 17 kota pantauan Kalimantan.
 3. **Verifikasi citra**: bantuan klasifikasi gambar menggunakan CNN dua kelas.
 
 Aplikasi ini bukan sistem pemadam kebakaran dan bukan pengganti laporan resmi. Tujuannya adalah membuat informasi awal lebih mudah dibaca serta membantu pengguna menentukan informasi apa yang perlu diperiksa berikutnya.
@@ -24,7 +24,7 @@ Proyek ini memisahkan ketiganya secara jelas:
 
 - **NASA FIRMS** menjawab: “Di mana satelit mendeteksi titik panas?”
 - **OpenWeatherMap** membantu menjawab: “Bagaimana konteks cuaca dan angin di sekitar kota?”
-- **IQAir AirVisual** menyediakan AQI US dari stasiun terdekat; sensor tidak selalu berada tepat di pusat kota.
+- **WAQI** menyediakan AQI dan data partikulat dari stasiun terdekat; stasiun tidak selalu berada tepat di pusat kota.
 - **CNN** menjawab: “Apakah pola pada gambar lebih mirip contoh area terbakar atau tidak?”
 
 ## 3. Fitur aplikasi
@@ -40,9 +40,11 @@ Proyek ini memisahkan ketiganya secara jelas:
 
 ### B. Kondisi kota
 
-Kartu kota menampilkan suhu, deskripsi cuaca, kelembapan, kecepatan angin, AQI US IQAir, PM2.5, dan PM10.
+Kartu kota menampilkan suhu, deskripsi cuaca, kelembapan, kecepatan angin, AQI WAQI, PM2.5, dan PM10.
 
-AQI pada kartu memakai skala **US AQI** dari IQAir. Cuaca dan angin tetap berasal dari OpenWeatherMap.
+AQI pada kartu berasal dari **WAQI**. Cuaca dan angin tetap berasal dari OpenWeatherMap.
+
+Titik pantauan yang digunakan adalah Pontianak, Singkawang, Ketapang, Palangkaraya, Sampit, Banjarmasin, Banjarbaru, Pangkalan Bun, Muara Teweh, Samarinda, Balikpapan, Bontang, Tenggarong, Tanjung Redeb, Tarakan, Tanjung Selor, dan Nunukan. Daftar ini mencakup ibu kota lima provinsi Kalimantan serta beberapa kota/kawasan penting lainnya; bukan daftar seluruh kota di pulau Kalimantan.
 
 ### C. Verifikasi citra
 
@@ -90,7 +92,7 @@ Contoh kalimat yang aman saat presentasi:
 - NASA FIRMS adalah observasi satelit, bukan pengukuran langsung dari lapangan.
 - Satu titik panas tidak menjelaskan ukuran api, penyebab, atau tingkat bahayanya.
 - Data OpenWeatherMap bersifat regional pada koordinat kota dan tidak menggantikan stasiun pemantauan kualitas udara.
-- IQAir terintegrasi untuk 16 kota, tetapi ketersediaan stasiun dan kuota API dapat membuat sebagian AQI tidak tersedia.
+- WAQI diintegrasikan untuk 17 titik pantauan, tetapi ketersediaan stasiun dan kuota API dapat membuat sebagian AQI tidak tersedia.
 - Model produksi masih memiliki dua kelas: `wildfire` dan `nowildfire`.
 - Perubahan arsitektur CNN belum dapat disebut meningkatkan akurasi sebelum training ulang, test split independen, confusion matrix, dan metrik per kelas dilakukan.
 - Animasi asap pada peta hanya visualisasi arah angin, bukan simulasi dispersi atmosfer.
@@ -102,7 +104,7 @@ Backend membutuhkan environment variable:
 ```env
 FIRMS_KEY=...
 OWM_KEY=...
-IQAIR_KEY=...
+WAQI_KEY=...
 PYTHON_BIN=python
 ```
 
@@ -127,7 +129,7 @@ npm run dev
 1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
 2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
 3. Tunjukkan animasi asap, lalu tekankan bahwa itu ilustrasi arah angin.
-4. Buka **Kondisi kota** dan jelaskan bahwa AQI US berasal dari IQAir, sedangkan cuaca dan angin berasal dari OpenWeatherMap.
+4. Buka **Kondisi kota** dan jelaskan bahwa AQI berasal dari WAQI, sedangkan cuaca dan angin berasal dari OpenWeatherMap.
 5. Buka **Verifikasi citra**, unggah satu gambar, lalu jelaskan hasil CNN sebagai bantuan awal.
 6. Tutup dengan batasan sistem dan rencana validasi model.
 
