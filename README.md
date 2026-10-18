@@ -21,6 +21,8 @@ Aplikasi WebGIS untuk pemantauan potensi kebakaran hutan dan lahan (karhutla) di
 * Kondisi cuaca dan AQI WAQI untuk 17 kota pantauan.
 * Verifikasi pola citra dengan CNN RGB sebagai screening awal, bukan bukti kebakaran.
 
+Dokumentasi training dan interpretasi hasil model tersedia di [`docs/MODEL_TRAINING.md`](./docs/MODEL_TRAINING.md).
+
 ## Tech Stack
 * **Frontend:** React.js, Vite, Tailwind CSS, React-Leaflet (Deployment: Vercel)
 * **Backend:** Python, TensorFlow/Keras, NASA FIRMS API (Deployment: Railway via Docker)

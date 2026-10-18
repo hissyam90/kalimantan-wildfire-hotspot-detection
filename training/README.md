@@ -1,6 +1,6 @@
 # Pipeline CNN patch VIIRS
 
-Folder ini berisi implementasi CNN patch VIIRS yang dikembangkan untuk penelitian. Ini berbeda dari model RGB `.h5` di [`backend/model/wildfire_model.h5`](../backend/model/wildfire_model.h5), yang dibuat dengan memodifikasi notebook Kaggle dan dipakai oleh [`backend/python/infer.py`](../backend/python/infer.py).
+Folder ini berisi implementasi CNN patch VIIRS yang dikembangkan untuk penelitian. Ini berbeda dari model RGB `.h5` di [`backend/model/wildfire_model.h5`](../backend/model/wildfire_model.h5), yang dibuat dengan memodifikasi notebook Kaggle dan dipakai oleh [`backend/python/infer.py`](../backend/python/infer.py). Dokumentasi lengkap model RGB, hasil training MobileNetV2, dan hasil test 97,00% tersedia di [`docs/MODEL_TRAINING.md`](../docs/MODEL_TRAINING.md).
 
 ## Kontrak data
 
