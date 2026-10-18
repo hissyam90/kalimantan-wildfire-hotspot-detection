@@ -40,8 +40,15 @@ export default function CityConditions() {
         <h2>Udara dan cuaca di Kalimantan</h2>
         <p>Bandingkan AQI WAQI dan kondisi cuaca di kota-kota pantauan Kalimantan. PM2.5 dan PM10 adalah konsentrasi partikulat dalam µg/m³.</p>
       </div>
-      <label className="city-search-label" htmlFor="city-search">Cari kota</label>
-      <input id="city-search" className="city-search" type="search" placeholder="Contoh: Samarinda" value={search} onChange={(event) => setSearch(event.target.value)} />
+      <div className="city-search-block">
+        <label className="city-search-label" htmlFor="city-search">Cari kota</label>
+        <div className="city-search-control">
+          <span className="search-icon" aria-hidden="true">⌕</span>
+          <input id="city-search" className="city-search" type="search" placeholder="Contoh: Samarinda" value={search} onChange={(event) => setSearch(event.target.value)} />
+          {search && <button className="clear-search" type="button" aria-label="Hapus pencarian" onClick={() => setSearch('')}>×</button>}
+        </div>
+        <span className="search-result-count">{search ? `${cities.filter((city) => city.name.toLocaleLowerCase('id-ID').includes(search.toLocaleLowerCase('id-ID'))).length} kota ditemukan` : `${cities.length} kota dipantau`}</span>
+      </div>
       {loading && <p className="muted" role="status">Memuat kondisi kota…</p>}
       {error && <p className="error-text">Data kota belum tersedia. Pastikan backend dan WAQI_KEY atau OWM_KEY aktif.</p>}
       <div className="city-grid">
