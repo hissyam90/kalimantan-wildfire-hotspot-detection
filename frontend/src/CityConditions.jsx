@@ -28,7 +28,7 @@ export default function CityConditions() {
       <div className="page-intro">
         <p className="eyebrow">KONDISI KOTA</p>
         <h2>Udara dan cuaca di Kalimantan</h2>
-        <p>Pilih kota untuk memahami konteks wilayahnya. AQI OpenWeatherMap berskala 1–5 dan merupakan gambaran regional, bukan sensor asap di setiap titik.</p>
+        <p>Bandingkan kondisi udara di berbagai kota Kalimantan. Angka di bawah berasal dari OpenWeatherMap dan bukan angka AQI 0–500 seperti yang biasa dipakai IQAir atau sebagian laporan lokal.</p>
       </div>
       {loading && <p className="muted" role="status">Memuat kondisi kota…</p>}
       {error && <p className="error-text">Data kota belum tersedia. Pastikan backend dan OWM_KEY aktif.</p>}
@@ -40,11 +40,11 @@ export default function CityConditions() {
               <div className="city-card-top"><h3>{city.name}</h3><span>{city.description || '—'}</span></div>
               <div className="city-temperature">{city.temp == null ? '—' : `${Math.round(city.temp)}°`}<small> C</small></div>
               <div className="city-metrics">
-                <div><span>AQI regional</span><strong>{AQI_TEXT[air?.aqi] || '—'}</strong><small>{air?.aqi ? `skala ${air.aqi}/5` : 'tidak tersedia'}</small></div>
+                <div><span>Indeks udara OWM</span><strong>{AQI_TEXT[air?.aqi] || '—'}</strong><small>{air?.aqi ? `${air.aqi} dari 5` : 'tidak tersedia'}</small></div>
                 <div><span>PM2.5</span><strong>{air?.pm2_5 ?? '—'}</strong><small>µg/m³</small></div>
                 <div><span>PM10</span><strong>{air?.pm10 ?? '—'}</strong><small>µg/m³</small></div>
               </div>
-              <p className="city-updated">Data udara: {formatDate(air?.fetchedAt)}</p>
+              <p className="city-updated">OpenWeatherMap · data regional · {formatDate(air?.fetchedAt)}</p>
             </article>
           );
         })}

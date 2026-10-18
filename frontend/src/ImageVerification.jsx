@@ -70,8 +70,8 @@ export default function ImageVerification() {
   const isWildfire = result?.label === 'wildfire';
   const resultTitle = isWildfire ? 'Terlihat seperti area terbakar' : 'Tidak terlihat seperti area terbakar';
   const resultHelp = isWildfire
-    ? 'Gambar memiliki pola yang lebih dekat dengan contoh wildfire pada data latihan. Periksa lokasi dan waktu dengan peta hotspot.'
-    : 'Gambar memiliki pola yang lebih dekat dengan contoh nowildfire pada data latihan. Hasil ini bukan jaminan tidak ada api.';
+    ? 'Model melihat pola gambar yang mirip contoh area terbakar. Cek kembali lokasi dan waktunya di Peta hotspot.'
+    : 'Model tidak melihat pola yang kuat seperti contoh area terbakar. Hasil ini bukan jaminan bahwa tidak ada api.';
 
   return (
     <section className="verify-panel">
@@ -110,11 +110,11 @@ export default function ImageVerification() {
                 <span className="result-value">{resultTitle}</span>
               </div>
               <div className="result-row">
-                <span className="result-label">Skor model (tidak terkalibrasi)</span>
+                <span className="result-label">Tingkat kecocokan pola</span>
                 <span className="result-value mono">{(result.confidence * 100).toFixed(1)}%</span>
               </div>
               <p className="result-explanation">{resultHelp}</p>
-              <p className="stats-note">Model ini dilatih dengan dua kelas: wildfire dan nowildfire. Skor tidak terkalibrasi.</p>
+              <p className="stats-note">Ini bantuan awal dari model gambar, bukan kepastian kebakaran dan bukan penentu lokasi.</p>
 
               <div className="bars">
                 {result.probabilities.map((p) => (
@@ -132,7 +132,7 @@ export default function ImageVerification() {
         </div>
 
         <div className="terminal">
-          <div className="terminal-header">detail pemeriksaan</div>
+          <div className="terminal-header">proses pemeriksaan</div>
           <div className="terminal-body">
             {logs.length === 0 && !loading && (
               <span className="terminal-placeholder">Log proses akan muncul di sini</span>

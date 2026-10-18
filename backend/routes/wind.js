@@ -49,6 +49,8 @@ module.exports = async (req, res) => {
           description: r.data.weather?.[0]?.description ?? '-',
           airQuality: airData ? {
             aqi: airData.main?.aqi ?? null,
+            source: 'OpenWeatherMap',
+            scale: '1-5',
             pm2_5: components.pm2_5 ?? null,
             pm10: components.pm10 ?? null,
             fetchedAt: airData.dt ? new Date(airData.dt * 1000).toISOString() : null,
@@ -56,7 +58,13 @@ module.exports = async (req, res) => {
         };
       })
     );
-    const result = { grid: results, fetchedAt: new Date().toISOString(), stale: false, context: 'regional' };
+    const result = {
+      grid: results,
+      fetchedAt: new Date().toISOString(),
+      stale: false,
+      context: 'regional',
+      airQualityNote: 'Indeks udara OpenWeatherMap berskala 1-5, bukan AQI 0-500 dari IQAir atau stasiun pemantauan lokal.',
+    };
     cache = result;
     cacheTime = Date.now();
     res.json(result);

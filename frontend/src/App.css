@@ -478,6 +478,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .main-count span { color: var(--muted); font-size: 13px; }
 .simple-breakdown { margin-top: 8px; }
 .data-time { color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 24px; }
+.source-note { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 12px 0 0; }
 .popup-help { color: #6B7066; font-size: 11px; line-height: 1.4; }
 .cities-page { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; width: 100%; overflow-y: auto; }
 .city-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -494,6 +495,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .city-updated { color: var(--muted); font-size: 11px; margin: 18px 0 0; }
 .verify-heading { margin-bottom: 24px; }
 .result-explanation { margin: 10px 0; color: var(--text); font-size: 13px; line-height: 1.5; }
+.result-value { font-weight: 600; }
 @media (max-width: 720px) {
   .city-grid { grid-template-columns: 1fr; }
   .cities-page { padding: 28px 16px 60px; }
