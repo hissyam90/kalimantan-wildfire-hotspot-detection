@@ -1,9 +1,7 @@
 # Deteksi Dini Titik Panas (Wildfire WebGIS)
 
 Aplikasi ini adalah MVP WebGIS untuk **observasi active-fire NASA FIRMS** di wilayah Kalimantan/Borneo dan eksperimen klasifikasi citra RGB. Judul penelitian resmi tetap: **“Deteksi Dini Titik Panas (Hotspot) Potensi Karhutla di Kalimantan Timur Berbasis Citra Satelit Menggunakan Convolutional Neural Network (CNN)”**.
-
-Ada dua cakupan yang harus dibedakan:
-
+<<<<<<< HEAD
 * **Cakupan penelitian resmi:** Kalimantan Timur.
 * **Cakupan dashboard:** bbox `108,-4.5,119.5,7.5`, yaitu Kalimantan yang lebih luas dan area sekitarnya. Cakupan peta ini tidak membuktikan bahwa model CNN berlaku di seluruh wilayah tersebut.
 
