@@ -533,10 +533,9 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .globe-stage { position: relative; height: min(58vw, 500px); min-height: 300px; display: grid; place-items: center; perspective: 800px; }
 .globe-stage::before, .globe-stage::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #a9d7ff; box-shadow: 0 0 12px #a9d7ff; opacity: .7; }
 .globe-stage::before { top: 18%; left: 18%; }.globe-stage::after { right: 17%; bottom: 18%; }
-.globe-sphere { position: relative; z-index: 1; width: min(70vw, 460px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; cursor: grab; touch-action: none; box-shadow: inset -35px -25px 65px rgba(0,0,0,.62), 0 0 45px rgba(67,153,221,.3); }
-.globe-sphere.is-dragging { cursor: grabbing; }
-.globe-earth { position: absolute; inset: 0; background-size: auto 100%; background-repeat: repeat-x; transition: background-position .08s linear; }
-.globe-shade { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, transparent 20%, rgba(0,0,0,.08) 48%, rgba(0,0,0,.66) 100%); pointer-events: none; }
+.globe-sphere { position: relative; z-index: 1; width: min(70vw, 460px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; cursor: default; user-select: none; box-shadow: inset -35px -25px 65px rgba(0,0,0,.42), 0 0 45px rgba(67,153,221,.3); }
+.globe-earth { position: absolute; inset: 0; background-color: #326b55; background-image: linear-gradient(135deg, #1a5272 0%, #2f7d63 42%, #9b8950 57%, #1b5875 100%); background-size: auto 100%; background-repeat: repeat-x; }
+.globe-shade { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, transparent 28%, rgba(0,0,0,.03) 52%, rgba(0,0,0,.42) 100%); pointer-events: none; }
 .kalimantan-focus { position: absolute; z-index: 1; left: 50%; top: 49%; width: 28px; height: 20px; border: 1px solid rgba(255,210,112,.95); border-radius: 50%; transform: translate(-50%, -50%) rotate(-18deg); box-shadow: 0 0 0 5px rgba(255,210,112,.08), 0 0 18px rgba(255,190,80,.55); pointer-events: none; }
 .globe-hotspot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #ffb14e; box-shadow: 0 0 0 4px rgba(255,177,78,.2), 0 0 14px #ff7b38; transform: translate(-50%, -50%); }
 .globe-marker-label { position: absolute; left: 43%; top: 48%; color: rgba(255,255,255,.7); font-size: 10px; }
@@ -548,7 +547,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .globe-stats { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.16); padding-top: 14px; }
 .globe-stats strong { font-size: 24px; }.globe-stats span, .globe-stats small { color: #afbbb0; font-size: 11px; }.globe-stats small { flex-basis: 100%; }
 .globe-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -12px 0 16px; font-size: 11px; color: #afbbb0; }
-.globe-controls button { border: 1px solid rgba(255,255,255,.25); background: transparent; color: #eff5ed; padding: 8px 10px; border-radius: 5px; cursor: pointer; }
 .time-slider { width: 100%; accent-color: var(--accent-green); }
 .export-button { width: 100%; margin-top: 16px; }
 .city-card { border: 1px solid var(--border); background: var(--panel-bg); padding: 20px; }

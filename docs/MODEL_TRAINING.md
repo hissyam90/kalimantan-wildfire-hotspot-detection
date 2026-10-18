@@ -63,6 +63,12 @@ graph TD
 Semua gambar diproses sebagai RGB dengan target ukuran `224 x 224` dan batch size `32`.
 Preprocessing piksel menggunakan fungsi: `tf.keras.applications.mobilenet_v2.preprocess_input`.
 
+### Preprocessing saat prototype berjalan
+
+Implementasi yang benar-benar dipakai endpoint `POST /api/predict` berada di [`backend/python/infer.py`](../backend/python/infer.py): gambar dibaca dari file upload, ukuran asli dicatat, gambar di-resize menjadi `224 x 224`, dikonversi ke RGB, lalu dinormalisasi menggunakan `mobilenet_v2.preprocess_input`. Tensor kemudian diberi dimensi batch sehingga bentuk input model adalah `[1, 224, 224, 3]`. Urutan ini harus sama dengan preprocessing saat training; jika tidak, distribusi nilai input berubah dan hasil prediksi tidak dapat dibandingkan secara adil.
+
+Augmentasi hanya relevan pada tahap training, bukan pada gambar yang dikirim pengguna. Pada inferensi tidak ada rotation, flip, zoom, atau crop tambahan.
+
 **Parameter Augmentasi Data (Train & Validation):**
 - `rotation_range=30`
 - `zoom_range=0.15`

@@ -54,6 +54,22 @@ Titik pantauan yang digunakan adalah Pontianak, Singkawang, Ketapang, Palangkara
 - Skor adalah tingkat kecocokan terhadap data latihan dan belum tentu terkalibrasi sebagai probabilitas.
 - Hasil tidak memberikan koordinat, luas api, tingkat bahaya, atau kepastian bahwa api benar-benar ada.
 
+### Fokus presentasi: Model/Prototype dan preprocessing
+
+Bagian CNN yang terhubung ke prototype adalah **model klasifikasi RGB berbasis MobileNetV2** yang disimpan sebagai `backend/model/wildfire_model.h5`. Model ini menerima satu gambar dan memilih salah satu dari dua label: `wildfire` atau `nowildfire`. MobileNetV2 dipakai sebagai backbone transfer learning; hasil perbandingan satu epoch di notebook menunjukkan validation accuracy tertinggi dibandingkan kandidat DenseNet121 dan EfficientNetB0, lalu model dilatih ulang dengan early stopping.
+
+Alur preprocessing pada saat inferensi adalah:
+
+1. Frontend mengirim gambar JPG/PNG melalui `POST /api/predict` dengan batas ukuran 5 MB.
+2. Backend menyimpan file sementara dan menjalankan `backend/python/infer.py`.
+3. Gambar dibaca, diubah ke RGB, lalu di-resize menjadi `224 x 224` piksel.
+4. Nilai piksel diproses dengan `tf.keras.applications.mobilenet_v2.preprocess_input`, kemudian ditambah dimensi batch menjadi `[1, 224, 224, 3]`.
+5. Model menghasilkan skor untuk dua kelas. Label dengan skor terbesar ditampilkan bersama confidence, margin skor, ukuran asli gambar, jumlah parameter, dan waktu inferensi.
+
+Saat menjelaskan hasil, gunakan kalimat **“skor kemiripan terhadap pola pada data latihan”**, bukan “probabilitas pasti terjadi kebakaran”. Angka akurasi 97% pada laporan training adalah hasil test split dataset Kaggle, bukan jaminan performa pada citra baru di lapangan.
+
+> **Catatan penting agar tidak tertukar:** folder `training/` berisi baseline CNN patch termal VIIRS yang lebih baru untuk penelitian. Pipeline tersebut sudah memiliki validasi manifest, split berbasis group, dan metrik test, tetapi belum terhubung ke `/api/predict` dan belum memiliki hasil training lapangan yang boleh diklaim sebagai model prototype.
+
 ## 4. Sumber data dan alur sistem
 
 ```mermaid
