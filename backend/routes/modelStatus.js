@@ -2,18 +2,19 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = (req, res) => {
-  const configured = process.env.SATELLITE_MODEL_PATH;
-  const modelPath = configured ? path.resolve(configured) : null;
+  const configured = process.env.RGB_MODEL_PATH || path.join(__dirname, '..', 'python', 'model', 'wildfire_model.h5');
+  const modelPath = path.resolve(configured);
   let available = false;
   try { available = Boolean(modelPath && fs.statSync(modelPath).isFile()); } catch { /* absent */ }
   res.json({
-    model: 'satellite_patch_cnn',
-    ready: false,
+    model: 'wildfire_rgb_cnn',
+    ready: available,
     artifactAvailable: available,
-    inferenceEnabled: false,
-    status: available ? 'artifact_unverified' : 'not_trained',
+    inferenceEnabled: available,
+    input: 'RGB 224x224',
+    status: available ? 'ready' : 'not_trained',
     message: available
-      ? 'Model CNN patch satelit tersedia; endpoint inferensi belum menggantikan inferensi RGB lama.'
-      : 'Model penelitian belum tersedia. Tidak ada prediksi CNN satelit yang dibuat.',
+      ? 'CNN RGB aktif pada endpoint /api/predict.'
+      : 'File model CNN RGB belum tersedia; endpoint prediksi tidak dapat berjalan.',
   });
 };

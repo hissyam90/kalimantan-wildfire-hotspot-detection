@@ -71,6 +71,12 @@ body {
 }
 
 .theme-toggle:hover { border-color: var(--accent-green); }
+.settings-wrap { position: relative; }
+.settings-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 1000; width: 220px; padding: 14px; border: 1px solid var(--border); background: var(--panel-bg); box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: 12px; }
+.settings-menu strong { display: block; margin-bottom: 12px; }
+.settings-menu label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--divider); color: var(--muted); }
+.settings-menu select { color: var(--text); background: var(--bg); border: 1px solid var(--input-border); padding: 4px; }
+.setting-check input { accent-color: var(--accent-green); }
 
 .tabs {
   display: flex;
@@ -482,6 +488,7 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .data-time { color: var(--muted); font-size: 11px; line-height: 1.5; margin-top: 24px; }
 .source-note { color: var(--muted); font-size: 11px; line-height: 1.5; margin: 12px 0 0; }
 .popup-help { color: #6B7066; font-size: 11px; line-height: 1.4; }
+[data-theme="dark"] .popup-help { color: var(--muted); }
 .map-facts { margin-top: 16px; border-top: 1px solid var(--divider); }
 .map-facts div { display: flex; flex-direction: column; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--divider); }
 .map-facts span, .map-facts b { font-size: 11px; }

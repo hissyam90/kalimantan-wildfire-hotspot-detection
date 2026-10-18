@@ -59,8 +59,12 @@ export default function ImageVerification() {
           }
         }
       }
+      if (buffer.trim()) {
+        if (buffer.startsWith('RESULT:')) setResult(JSON.parse(buffer.slice('RESULT:'.length)));
+        else setLogs(prev => [...prev, buffer]);
+      }
     } catch (err) {
-      setError('Gagal memproses gambar. Periksa apakah server backend sedang berjalan.');
+      setError('Image processing failed. Check that the backend is running.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -68,17 +72,17 @@ export default function ImageVerification() {
   };
 
   const isWildfire = result?.label === 'wildfire';
-  const resultTitle = isWildfire ? 'Terlihat seperti area terbakar' : 'Tidak terlihat seperti area terbakar';
+  const resultTitle = isWildfire ? 'Wildfire-like pattern' : 'No wildfire-like pattern';
   const resultHelp = isWildfire
-    ? 'Model melihat pola gambar yang mirip contoh area terbakar. Cek kembali lokasi dan waktunya di Peta hotspot.'
-    : 'Model tidak melihat pola yang kuat seperti contoh area terbakar. Hasil ini bukan jaminan bahwa tidak ada api.';
+    ? 'The CNN found a visual pattern similar to wildfire examples. Cross-check the location and time on the hotspot map.'
+    : 'The CNN did not find a strong wildfire-like pattern. This does not prove that there is no fire.';
 
   return (
     <section className="verify-panel">
       <div className="page-intro verify-heading">
-        <p className="eyebrow">PEMERIKSAAN CITRA</p>
-        <h2>Periksa sebuah gambar</h2>
-        <p>Model membaca pola visual gambar dan memberi dua kemungkinan. Gunakan hasil ini sebagai bantuan awal, bukan bukti tunggal kebakaran.</p>
+        <p className="eyebrow">CNN IMAGE VERIFICATION</p>
+        <h2>Analyze an image</h2>
+        <p>The RGB CNN classifies visual patterns into two classes. Use the result as an initial screening signal, not as standalone fire evidence.</p>
       </div>
       <div className="verify-grid">
         <div>
@@ -86,7 +90,7 @@ export default function ImageVerification() {
             {preview ? (
               <img src={preview} alt="Pratinjau citra" className="preview" />
             ) : (
-              <span className="dropzone-text">Klik untuk memilih gambar (.jpg atau .png)</span>
+              <span className="dropzone-text">Choose an image (.jpg or .png)</span>
             )}
           </label>
           <input
@@ -98,7 +102,7 @@ export default function ImageVerification() {
           />
 
           <button onClick={handleSubmit} disabled={!file || loading} className="run-button">
-            {loading ? 'Sedang memeriksa…' : 'Periksa gambar'}
+            {loading ? 'Running CNN…' : 'Run CNN verification'}
           </button>
 
           {error && <p className="error-text">{error}</p>}
@@ -106,20 +110,20 @@ export default function ImageVerification() {
           {result && (
             <div className={`result ${isWildfire ? 'result-alert' : 'result-clear'}`}>
               <div className="result-row">
-                <span className="result-label">Status</span>
+                <span className="result-label">Classification</span>
                 <span className="result-value">{resultTitle}</span>
               </div>
               <div className="result-row">
-                <span className="result-label">Tingkat kecocokan pola</span>
+                <span className="result-label">Pattern match</span>
                 <span className="result-value mono">{(result.confidence * 100).toFixed(1)}%</span>
               </div>
               <p className="result-explanation">{resultHelp}</p>
-              <p className="stats-note">Ini bantuan awal dari model gambar, bukan kepastian kebakaran dan bukan penentu lokasi.</p>
+              <p className="stats-note">CNN output is not a certainty, fire-size estimate, or location detector.</p>
 
               <div className="bars">
                 {result.probabilities.map((p) => (
                   <div className="bar-row" key={p.label}>
-                    <span className="bar-label">{p.label === 'wildfire' ? 'Terbakar' : 'Tidak terbakar'}</span>
+                    <span className="bar-label">{p.label === 'wildfire' ? 'Wildfire' : 'No wildfire'}</span>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${p.score * 100}%` }} data-kind={p.label} />
                     </div>
@@ -132,10 +136,10 @@ export default function ImageVerification() {
         </div>
 
         <div className="terminal">
-          <div className="terminal-header"><span>ringkasan proses</span><span className="terminal-status">{loading ? 'berjalan' : result ? 'selesai' : 'menunggu gambar'}</span></div>
+          <div className="terminal-header"><span>CNN inference log</span><span className="terminal-status">{loading ? 'running' : result ? 'complete' : 'waiting for image'}</span></div>
           <div className="terminal-body">
             {logs.length === 0 && !loading && (
-              <span className="terminal-placeholder">Log proses akan muncul di sini</span>
+              <span className="terminal-placeholder">Preprocessing and inference logs will appear here</span>
             )}
             {logs.map((line, i) => (
               <div key={i} className="terminal-line">{line}</div>
