@@ -526,28 +526,25 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .view-switcher { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; margin: 18px 0 4px; }
 .view-switcher button { border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); padding: 8px 5px; cursor: pointer; font: inherit; font-size: 11px; }
 .view-switcher button.selected { color: var(--text); border-color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 15%, transparent); }
-.globe-view { height: 100%; min-height: 420px; overflow: hidden; padding: clamp(20px, 4vw, 48px); background: radial-gradient(circle at 50% 45%, #263b3d, #111719 65%); color: #eff5ed; }
+.globe-view { height: 100%; min-height: 420px; overflow: hidden; padding: clamp(20px, 4vw, 48px); background: radial-gradient(circle at 50% 45%, #172d43, #080f18 68%); color: #eff5ed; }
 .globe-heading { max-width: 460px; position: relative; z-index: 2; }
 .globe-heading h2 { margin: 7px 0; font-family: 'Source Serif 4', serif; }
 .globe-heading p { color: #afbbb0; font-size: 12px; line-height: 1.5; }
 .globe-stage { position: relative; height: min(58vw, 500px); min-height: 300px; display: grid; place-items: center; perspective: 800px; }
-.globe-stage::before, .globe-stage::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #b8e6c1; box-shadow: 0 0 12px #b8e6c1; opacity: .7; }
+.globe-stage::before, .globe-stage::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #a9d7ff; box-shadow: 0 0 12px #a9d7ff; opacity: .7; }
 .globe-stage::before { top: 18%; left: 18%; }.globe-stage::after { right: 17%; bottom: 18%; }
-.globe-sphere { position: relative; z-index: 1; width: min(70vw, 460px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; cursor: grab; touch-action: none; box-shadow: inset -35px -25px 65px rgba(0,0,0,.58), 0 0 45px rgba(96,180,122,.22); }
+.globe-sphere { position: relative; z-index: 1; width: min(70vw, 460px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; cursor: grab; touch-action: none; box-shadow: inset -35px -25px 65px rgba(0,0,0,.62), 0 0 45px rgba(67,153,221,.3); }
 .globe-sphere.is-dragging { cursor: grabbing; }
 .globe-earth { position: absolute; inset: 0; background-size: auto 100%; background-repeat: repeat-x; transition: background-position .08s linear; }
 .globe-shade { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, transparent 20%, rgba(0,0,0,.08) 48%, rgba(0,0,0,.66) 100%); pointer-events: none; }
-.kalimantan-focus { position: absolute; z-index: 1; left: 50%; top: 49%; width: 28px; height: 20px; border: 1px solid rgba(184,230,193,.9); border-radius: 50%; transform: translate(-50%, -50%) rotate(-18deg); box-shadow: 0 0 0 5px rgba(184,230,193,.08), 0 0 18px rgba(184,230,193,.6); pointer-events: none; }
+.kalimantan-focus { position: absolute; z-index: 1; left: 50%; top: 49%; width: 28px; height: 20px; border: 1px solid rgba(255,210,112,.95); border-radius: 50%; transform: translate(-50%, -50%) rotate(-18deg); box-shadow: 0 0 0 5px rgba(255,210,112,.08), 0 0 18px rgba(255,190,80,.55); pointer-events: none; }
 .globe-hotspot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #ffb14e; box-shadow: 0 0 0 4px rgba(255,177,78,.2), 0 0 14px #ff7b38; transform: translate(-50%, -50%); }
 .globe-marker-label { position: absolute; left: 43%; top: 48%; color: rgba(255,255,255,.7); font-size: 10px; }
-.globe-orbit { position: absolute; z-index: 2; left: 11%; top: 39%; width: 78%; height: 22%; border: 1px solid rgba(180,220,190,.5); border-radius: 50%; transform: rotate(-22deg); box-shadow: 0 0 12px rgba(150,220,170,.12); animation: orbit-drift 12s linear infinite; pointer-events: none; }
-.orbit-two { transform: rotate(66deg) scale(.92); opacity: .58; animation-duration: 16s; animation-direction: reverse; }
-.orbit-satellite { position: absolute; top: -7px; left: 50%; display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #e9ffd9; box-shadow: 0 0 5px #d6ffcf, 0 0 15px #78d68e; transform: translateX(-50%); }
-.orbit-satellite::after { content: ''; position: absolute; width: 27px; height: 5px; border: 1px solid #85cda0; opacity: .8; }
-.orbit-satellite b { position: absolute; top: 15px; white-space: nowrap; color: #d7ebd5; font-size: 9px; font-weight: 600; letter-spacing: .04em; text-shadow: 0 1px 5px #111; }
-@keyframes orbit-drift { to { transform: rotate(338deg); } }
-@keyframes orbit-drift-two { to { transform: rotate(-294deg) scale(.92); } }
-.orbit-two { animation-name: orbit-drift-two; }
+.globe-orbit { position: absolute; z-index: 2; left: 11%; top: 39%; width: 78%; height: 22%; border: 1px solid rgba(170,215,255,.58); border-radius: 50%; transform: rotate(-22deg); box-shadow: 0 0 12px rgba(95,170,235,.16); pointer-events: none; }
+.orbit-two { transform: rotate(66deg) scale(.92); opacity: .7; }
+.orbit-satellite { position: absolute; top: -7px; left: 50%; display: grid; place-items: center; width: 14px; height: 14px; border-radius: 50%; background: #f4fbff; box-shadow: 0 0 5px #e6f6ff, 0 0 15px #6eb8ef; transform: translateX(-50%); }
+.orbit-satellite::after { content: ''; position: absolute; width: 27px; height: 5px; border: 1px solid #8fc9f0; opacity: .8; }
+.orbit-satellite b { position: absolute; top: 15px; white-space: nowrap; color: #d9efff; font-size: 9px; font-weight: 600; letter-spacing: .04em; text-shadow: 0 1px 5px #111; }
 .globe-stats { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.16); padding-top: 14px; }
 .globe-stats strong { font-size: 24px; }.globe-stats span, .globe-stats small { color: #afbbb0; font-size: 11px; }.globe-stats small { flex-basis: 100%; }
 .globe-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -12px 0 16px; font-size: 11px; color: #afbbb0; }

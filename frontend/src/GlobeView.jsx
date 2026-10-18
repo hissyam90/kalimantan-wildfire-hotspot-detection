@@ -51,6 +51,6 @@ export default function GlobeView({ points }) {
       <div className="globe-orbit orbit-two"><span className="orbit-satellite"><b>NOAA-21</b></span></div>
     </div>
     <div className="globe-controls"><button type="button" onClick={() => setRotation(0)}>Kembali ke Kalimantan</button><span>← geser untuk rotasi →</span></div>
-    <div className="globe-stats"><strong>{visiblePoints.length.toLocaleString('id-ID')}</strong><span>observasi yang diproyeksikan</span><small>{tleStatus}. Lintasan animasi adalah visual eksplorasi; posisi presisi memerlukan propagasi SGP4.</small></div>
+    <div className="globe-stats"><strong>{visiblePoints.length.toLocaleString('id-ID')}</strong><span>observasi yang diproyeksikan</span><small>{tleStatus}. Lintasan ditampilkan statis sebagai referensi visual; posisi presisi memerlukan propagasi SGP4.</small></div>
   </section>;
 }
