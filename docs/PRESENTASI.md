@@ -56,12 +56,47 @@ Titik pantauan yang digunakan adalah Pontianak, Singkawang, Ketapang, Palangkara
 
 ## 4. Sumber data dan alur sistem
 
-```text
-NASA FIRMS ───────┐
-                  ├─ Backend Express ── Frontend React
-OpenWeatherMap ───┘          │
-                             └─ CNN Python untuk /api/predict
+```mermaid
+classDiagram
+    class FrontendReact {
+        +url_backend : str
+        +tampilkan_peta_firms()
+        +tampilkan_cuaca()
+        +request_prediksi(data)
+    }
+
+    class BackendExpress {
+        -api_key_nasa : str
+        -api_key_owm : str
+        +get_nasa_firms_data()
+        +get_weather_data()
+        +forward_to_cnn(data)
+    }
+
+    class NASAFIRMS {
+        +endpoint_url : str
+        +fetch_hotspots()
+    }
+
+    class OpenWeatherMap {
+        +endpoint_url : str
+        +fetch_weather()
+    }
+
+    class CNNPython {
+        +model_path : str
+        +predict_endpoint : str
+        +load_model()
+        +preprocess_data()
+        +predict_hotspot()
+    }
+
+    FrontendReact <--> BackendExpress : HTTP Requests / API REST
+    BackendExpress ..> NASAFIRMS : Fetch Data
+    BackendExpress ..> OpenWeatherMap : Fetch Data
+    BackendExpress --> CNNPython : /api/predict
 ```
+
 
 Endpoint utama:
 
@@ -124,7 +159,7 @@ npm install
 npm run dev
 ```
 
-## 8. Alur demo untuk dosen
+## 8. Alur demo 
 
 1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
 2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
