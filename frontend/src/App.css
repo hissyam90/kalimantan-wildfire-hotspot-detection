@@ -126,6 +126,15 @@ body {
 }
 
 .map-area { flex: 1; position: relative; }
+.map-filters { display: grid; gap: 6px; margin-bottom: 16px; }
+.satellite-breakdown { display: grid; gap: 6px; margin-top: 14px; }
+.satellite-stat { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 7px; padding: 7px 8px; color: var(--text); background: transparent; border: 1px solid var(--divider); text-align: left; font: inherit; font-size: 11px; cursor: pointer; }
+.satellite-stat:hover, .satellite-stat.selected { border-color: var(--accent-green); background: color-mix(in srgb, var(--accent-green) 10%, transparent); }
+.satellite-stat i, .map-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.satellite-stat b { font-weight: 600; }
+.map-legend { position: absolute; z-index: 500; right: 12px; bottom: 24px; display: grid; gap: 6px; min-width: 150px; padding: 10px 12px; color: #17201b; background: rgba(250, 249, 244, .94); border: 1px solid rgba(30, 40, 32, .2); font-size: 11px; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+.map-legend span { display: flex; align-items: center; gap: 7px; }
+.map-legend small { color: #59635c; line-height: 1.35; }
 
 .stats-panel h2 {
   font-family: 'Source Serif 4', serif;
