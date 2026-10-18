@@ -65,7 +65,7 @@ body {
   color: var(--text);
   font-family: 'Inter', sans-serif;
   font-size: 12px;
-  padding: 6px 12px;
+  padding: 10px 16px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -73,6 +73,7 @@ body {
 .theme-toggle:hover { border-color: var(--accent-green); }
 .settings-wrap { position: relative; }
 .settings-menu { position: absolute; right: 0; top: calc(100% + 8px); z-index: 1000; width: 220px; padding: 14px; border: 1px solid var(--border); background: var(--panel-bg); box-shadow: 0 8px 24px rgba(0,0,0,.12); font-size: 12px; }
+.settings-menu { border-radius: 8px; }
 .settings-menu strong { display: block; margin-bottom: 12px; }
 .settings-menu label { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--divider); color: var(--muted); }
 .settings-menu select { color: var(--text); background: var(--bg); border: 1px solid var(--input-border); padding: 4px; }
@@ -294,6 +295,11 @@ body {
   font-size: 12px;
   min-width: 210px;
 }
+.hotspot-popup h3 { margin: 4px 0 14px; font-size: 16px; }
+.hotspot-popup dl { margin: 0; }
+.hotspot-popup dl div { padding: 8px 0; border-top: 1px solid var(--divider); }
+.hotspot-popup dt { color: var(--muted); font-size: 11px; }
+.hotspot-popup dd { margin: 3px 0 0; font-weight: 600; }
 
 .popup-row {
   display: flex;
@@ -344,6 +350,9 @@ body {
 }
 
 .terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 8px 12px;
   background: var(--divider);
   color: var(--text);
@@ -516,6 +525,12 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .verify-heading { margin-bottom: 24px; }
 .result-explanation { margin: 10px 0; color: var(--text); font-size: 13px; line-height: 1.5; }
 .result-value { font-weight: 600; }
+.model-details { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--divider); }
+.model-details h3 { margin: 0 0 10px; font-size: 14px; }
+.model-details dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 0; }
+.model-details dl div { display: flex; flex-direction: column; gap: 3px; }
+.model-details dt { color: var(--muted); font-size: 11px; }
+.model-details dd { margin: 0; font-size: 12px; font-weight: 600; }
 @media (max-width: 720px) {
   .city-grid { grid-template-columns: 1fr; }
   .cities-page { padding: 28px 16px 60px; }

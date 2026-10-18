@@ -1,16 +1,21 @@
-# React + Vite
+# Frontend Pantau Karhutla Kalimantan
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Frontend React/Vite ini menampilkan peta observasi NASA FIRMS, kondisi cuaca dan AQI IQAir untuk 16 kota, serta verifikasi citra dengan CNN RGB.
 
-Currently, two official plugins are available:
+## Menjalankan
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```powershell
+npm install
+npm run dev
+```
 
-## React Compiler
+Atur `VITE_API_URL` pada `.env` jika backend tidak berjalan di `http://localhost:5000`.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Pemeriksaan
 
-## Expanding the Oxlint configuration
+```powershell
+npm run lint
+npm run build
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Hasil CNN adalah screening pola visual. Aplikasi tidak menggunakannya sebagai penentu koordinat, ukuran api, atau bukti tunggal kebakaran.

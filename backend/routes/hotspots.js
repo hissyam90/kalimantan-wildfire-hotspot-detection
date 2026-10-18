@@ -33,9 +33,7 @@ function toTimestamp(date, time) {
 function normalizeRows(rows, product) {
   return rows.map((row) => ({
     lat: Number(row.latitude), lon: Number(row.longitude),
-    brightness: Number(row.bright_ti4 ?? row.brightness), frp: Number(row.frp),
-    confidence: row.confidence || '-', satellite: row.satellite || product.replace('_NRT', ''),
-    daynight: row.daynight || '-', date: row.acq_date, time: String(row.acq_time || '').padStart(4, '0'),
+    satellite: row.satellite || product.replace('_NRT', ''), date: row.acq_date, time: String(row.acq_time || '').padStart(4, '0'),
     ts: toTimestamp(row.acq_date, row.acq_time),
   })).filter((row) => Number.isFinite(row.lat) && Number.isFinite(row.lon)
     && row.lat >= COVERAGE.south && row.lat <= COVERAGE.north
@@ -79,8 +77,7 @@ async function handler(req, res) {
     const now = Date.now();
     const windowStart = now - hours * 3600 * 1000;
     const hotspots = rows.filter((row) => row.ts >= windowStart).map((row) => ({
-      lat: row.lat, lon: row.lon, brightness: row.brightness, frp: row.frp,
-      confidence: row.confidence, satellite: row.satellite, daynight: row.daynight,
+      lat: row.lat, lon: row.lon,
       date: row.date, time: row.time, observedAt: new Date(row.ts).toISOString(),
     }));
     return res.json({ days, hours, source: 'NASA FIRMS VIIRS NOAA-20/NOAA-21 NRT', dataType: 'active-fire point observations',

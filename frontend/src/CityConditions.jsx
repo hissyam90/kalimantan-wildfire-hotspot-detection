@@ -46,15 +46,15 @@ export default function CityConditions() {
           const air = city.airQuality;
           return (
             <article className="city-card" key={city.name}>
-              <div className="city-card-top"><div><h3>{city.name}</h3><span>{city.description || 'Weather unavailable'}</span></div><span className={`air-badge ${aqiClass(air?.aqi)}`}>{aqiLabel(air?.aqi)}</span></div>
+               <div className="city-card-top"><div><h3>{city.name}</h3><span>{city.description || 'Cuaca tidak tersedia'}</span></div><span className={`air-badge ${aqiClass(air?.aqi)}`}>{aqiLabel(air?.aqi)}</span></div>
               <div className="city-temperature">{city.temp == null ? '—' : `${Math.round(city.temp)}°`}<small> C</small><span className="weather-context">kelembapan {city.humidity == null ? '—' : `${city.humidity}%`}</span></div>
-              <div className="city-metrics">
-                <div><span>IQAir AQI</span><strong>{air?.aqi ?? '—'}</strong><small>{air ? 'US AQI' : 'not available'}</small></div>
+               <div className="city-metrics">
+                 <div><span>IQAir AQI</span><strong>{air?.aqi ?? '—'}</strong><small>{air ? 'US AQI' : 'tidak tersedia'}</small></div>
                 <div><span>PM2.5</span><strong>{air?.pm2_5 ?? '—'}</strong><small>µg/m³</small></div>
                 <div><span>PM10</span><strong>{air?.pm10 ?? '—'}</strong><small>µg/m³</small></div>
               </div>
-              <div className="city-extra"><span>Angin {city.windSpeed == null ? '—' : `${(city.windSpeed * 3.6).toFixed(1)} km/jam`}</span><span>Station {air?.station || 'unavailable'}</span></div>
-              <p className="city-updated">Air source: {air?.source || 'IQAir unavailable'} · {formatDate(air?.fetchedAt)} · weather: OpenWeatherMap</p>
+               <div className="city-extra"><span>Angin {city.windSpeed == null ? '—' : `${(city.windSpeed * 3.6).toFixed(1)} km/jam`}</span><span>Stasiun {air?.station || 'tidak tersedia'}</span></div>
+               <p className="city-updated">Sumber udara: {air?.source || 'IQAir tidak tersedia'} · {formatDate(air?.fetchedAt)} · cuaca: OpenWeatherMap</p>
             </article>
           );
         })}

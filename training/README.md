@@ -24,7 +24,7 @@ Jangan menjalankan contoh terhadap `firms_sample.csv` header-only. Jika eksperim
 
 ## Provenance, lisensi, dan status
 
-Model RGB lama merujuk pada [Wildfire Prediction Dataset (Satellite Images)](https://www.kaggle.com/code/vidhuran07/wildfire-prediction-dataset-satellite-images) dan telah dimodifikasi di notebook sebelum diekspor menjadi `.h5`. Pipeline pada folder ini adalah pengembangan terpisah: inputnya patch termal VIIRS I04/I05 dan label referensinya dicocokkan dengan FIRMS. Jadi, referensi Kaggle menjelaskan asal/eksperimen model RGB lama; kode `training/` menjelaskan baseline CNN patch penelitian baru. Detail lisensi, dataset, dan metrik Kaggle tetap harus dilengkapi dari metadata notebook yang sebenarnya.
+Model RGB lama merujuk pada [Wildfire Prediction Dataset (Satellite Images)](https://www.kaggle.com/code/vidhuran07/wildfire-prediction-dataset-satellite-images) dan telah dimodifikasi di notebook sebelum diekspor menjadi `.h5`. Endpoint menampilkan rincian inferensi per gambar—ukuran asli, input 224×224, jumlah parameter, waktu inferensi, dan margin skor—agar proses dapat dipresentasikan secara teknis. Rincian tersebut bukan pengganti accuracy, precision, recall, atau F1 dari evaluasi dataset. Pipeline pada folder ini adalah pengembangan terpisah: inputnya patch termal VIIRS I04/I05 dan label referensinya dicocokkan dengan FIRMS. Jadi, referensi Kaggle menjelaskan asal/eksperimen model RGB lama; kode `training/` menjelaskan baseline CNN patch penelitian baru.
 
 Untuk pilot VIIRS, lihat [`SOURCES.md`](./SOURCES.md) dan [`VIIRS.md`](./VIIRS.md). Dataset asli memerlukan akses layanan dan pemeriksaan ketentuan produk. Token tidak boleh ditulis ke repository. `training/artifacts/`, `data/raw/`, dan `data/prepared/` di-ignore.
 

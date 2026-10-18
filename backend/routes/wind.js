@@ -28,13 +28,19 @@ let cacheTime = 0;
 
 function normalizePollution(data) {
   const pollution = data?.current?.pollution;
-  if (!pollution || !Number.isFinite(Number(pollution.aqius))) return null;
+  const numeric = (value) => {
+    if (value === null || value === undefined || value === '' || (typeof value === 'string' && !value.trim())) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  };
+  if (!pollution || numeric(pollution.aqius) === null) return null;
   const concentration = (value) => {
-    if (Number.isFinite(Number(value))) return Number(value);
-    return Number.isFinite(Number(value?.conc)) ? Number(value.conc) : null;
+    const direct = numeric(value);
+    if (direct !== null) return direct;
+    return numeric(value?.conc);
   };
   return {
-    aqi: Number(pollution.aqius),
+    aqi: numeric(pollution.aqius),
     scale: 'US AQI',
     source: 'IQAir AirVisual',
     pm2_5: concentration(pollution.p2),

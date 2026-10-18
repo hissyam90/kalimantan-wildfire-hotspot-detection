@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { API_URL } from './config';
 
 export default function ImageVerification() {
@@ -8,6 +8,7 @@ export default function ImageVerification() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
 
   const handleFileChange = (e) => {
     const selected = e.target.files[0];
@@ -42,6 +43,15 @@ export default function ImageVerification() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let receivedResult = false;
+      const consume = (line) => {
+        if (!line.trim()) return;
+        if (line.startsWith('ERROR:')) throw new Error('Inference failed');
+        if (line.startsWith('RESULT:')) {
+          setResult(JSON.parse(line.slice('RESULT:'.length)));
+          receivedResult = true;
+        } else setLogs(prev => [...prev, line]);
+      };
 
       while (true) {
         const { value, done } = await reader.read();
@@ -51,20 +61,14 @@ export default function ImageVerification() {
         buffer = lines.pop();
 
         for (const line of lines) {
-          if (!line.trim()) continue;
-          if (line.startsWith('RESULT:')) {
-            setResult(JSON.parse(line.slice('RESULT:'.length)));
-          } else {
-            setLogs(prev => [...prev, line]);
-          }
+          consume(line);
         }
       }
-      if (buffer.trim()) {
-        if (buffer.startsWith('RESULT:')) setResult(JSON.parse(buffer.slice('RESULT:'.length)));
-        else setLogs(prev => [...prev, buffer]);
-      }
+      consume(buffer + decoder.decode());
+      if (!receivedResult) throw new Error('No inference result');
     } catch (err) {
-      setError('Image processing failed. Check that the backend is running.');
+      setResult(null);
+      setError('Gambar gagal dianalisis. Pastikan backend, model, dan dependensi Python tersedia.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -72,17 +76,17 @@ export default function ImageVerification() {
   };
 
   const isWildfire = result?.label === 'wildfire';
-  const resultTitle = isWildfire ? 'Wildfire-like pattern' : 'No wildfire-like pattern';
+  const resultTitle = isWildfire ? 'Pola menyerupai kebakaran' : 'Pola tidak menyerupai kebakaran';
   const resultHelp = isWildfire
-    ? 'The CNN found a visual pattern similar to wildfire examples. Cross-check the location and time on the hotspot map.'
-    : 'The CNN did not find a strong wildfire-like pattern. This does not prove that there is no fire.';
+    ? 'CNN menemukan pola visual yang menyerupai contoh kebakaran. Cocokkan lokasi dan waktu gambar dengan peta hotspot serta laporan setempat.'
+    : 'CNN memilih kelas bukan kebakaran. Hasil ini tidak menjamin bahwa lokasi pada gambar bebas dari api.';
 
   return (
     <section className="verify-panel">
       <div className="page-intro verify-heading">
-        <p className="eyebrow">CNN IMAGE VERIFICATION</p>
-        <h2>Analyze an image</h2>
-        <p>The RGB CNN classifies visual patterns into two classes. Use the result as an initial screening signal, not as standalone fire evidence.</p>
+        <p className="eyebrow">VERIFIKASI CITRA CNN</p>
+        <h2>Periksa pola pada gambar</h2>
+        <p>Unggah gambar untuk pemeriksaan awal pola kebakaran. Hasil CNN perlu dibandingkan dengan waktu, lokasi, dan sumber lain; bukan bukti kebakaran yang berdiri sendiri.</p>
       </div>
       <div className="verify-grid">
         <div>
@@ -90,19 +94,20 @@ export default function ImageVerification() {
             {preview ? (
               <img src={preview} alt="Pratinjau citra" className="preview" />
             ) : (
-              <span className="dropzone-text">Choose an image (.jpg or .png)</span>
+              <span className="dropzone-text">Pilih gambar JPG atau PNG (maks. 5 MB)</span>
             )}
           </label>
           <input
             id="file-input"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png"
+            disabled={loading}
             onChange={handleFileChange}
             className="file-input"
           />
 
           <button onClick={handleSubmit} disabled={!file || loading} className="run-button">
-            {loading ? 'Running CNN…' : 'Run CNN verification'}
+            {loading ? 'Menganalisis gambar…' : 'Analisis dengan CNN'}
           </button>
 
           {error && <p className="error-text">{error}</p>}
@@ -110,20 +115,20 @@ export default function ImageVerification() {
           {result && (
             <div className={`result ${isWildfire ? 'result-alert' : 'result-clear'}`}>
               <div className="result-row">
-                <span className="result-label">Classification</span>
+                <span className="result-label">Hasil klasifikasi</span>
                 <span className="result-value">{resultTitle}</span>
               </div>
               <div className="result-row">
-                <span className="result-label">Pattern match</span>
+                <span className="result-label">Skor kelas terpilih</span>
                 <span className="result-value mono">{(result.confidence * 100).toFixed(1)}%</span>
               </div>
               <p className="result-explanation">{resultHelp}</p>
-              <p className="stats-note">CNN output is not a certainty, fire-size estimate, or location detector.</p>
+              <p className="stats-note">Persentase adalah skor model, bukan akurasi atau kepastian kebakaran. CNN tidak mengukur luas api dan tidak menentukan lokasi.</p>
 
               <div className="bars">
                 {result.probabilities.map((p) => (
                   <div className="bar-row" key={p.label}>
-                    <span className="bar-label">{p.label === 'wildfire' ? 'Wildfire' : 'No wildfire'}</span>
+                    <span className="bar-label">{p.label === 'wildfire' ? 'Kebakaran' : 'Bukan kebakaran'}</span>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${p.score * 100}%` }} data-kind={p.label} />
                     </div>
@@ -131,12 +136,23 @@ export default function ImageVerification() {
                   </div>
                 ))}
               </div>
+              {result.diagnostics && <div className="model-details">
+                <h3>Rincian analisis</h3>
+                <dl>
+                  <div><dt>Ukuran gambar asli</dt><dd>{result.diagnostics.originalSize.join(' × ')} piksel</dd></div>
+                  <div><dt>Input model</dt><dd>{result.modelInput}</dd></div>
+                  <div><dt>Jumlah parameter</dt><dd>{result.diagnostics.parameters.toLocaleString('id-ID')}</dd></div>
+                  <div><dt>Waktu inferensi</dt><dd>{result.diagnostics.inferenceMs.toFixed(1)} ms</dd></div>
+                  <div><dt>Selisih skor dua kelas</dt><dd>{(result.diagnostics.margin * 100).toFixed(1)} poin persentase</dd></div>
+                </dl>
+                <p className="stats-note">Selisih kecil berarti skor dua kelas berdekatan, bukan ukuran bahaya. Rincian ini berasal dari proses gambar ini, bukan hasil evaluasi dataset.</p>
+              </div>}
             </div>
           )}
         </div>
 
         <div className="terminal">
-          <div className="terminal-header"><span>CNN inference log</span><span className="terminal-status">{loading ? 'running' : result ? 'complete' : 'waiting for image'}</span></div>
+          <div className="terminal-header"><span>CNN inference log</span><span className="terminal-status">{loading ? 'running' : error ? 'failed' : result ? 'complete' : 'waiting for image'}</span></div>
           <div className="terminal-body">
             {logs.length === 0 && !loading && (
               <span className="terminal-placeholder">Preprocessing and inference logs will appear here</span>

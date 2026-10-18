@@ -11,7 +11,7 @@ Dokumen ini menjadi acuan singkat untuk menjelaskan tujuan, cara kerja, sumber d
 **Pantau Karhutla Kalimantan** adalah aplikasi web untuk membantu pengguna melihat tiga jenis informasi yang saling melengkapi:
 
 1. **Peta hotspot**: lokasi observasi panas dari satelit NASA FIRMS.
-2. **Kondisi kota**: cuaca dan kualitas udara regional di beberapa kota Kalimantan.
+2. **Kondisi kota**: cuaca dan AQI US dari IQAir di 16 kota pantauan Kalimantan.
 3. **Verifikasi citra**: bantuan klasifikasi gambar menggunakan CNN dua kelas.
 
 Aplikasi ini bukan sistem pemadam kebakaran dan bukan pengganti laporan resmi. Tujuannya adalah membuat informasi awal lebih mudah dibaca serta membantu pengguna menentukan informasi apa yang perlu diperiksa berikutnya.
@@ -23,7 +23,8 @@ Informasi karhutla sering tersebar di beberapa sumber dan memakai istilah teknis
 Proyek ini memisahkan ketiganya secara jelas:
 
 - **NASA FIRMS** menjawab: “Di mana satelit mendeteksi titik panas?”
-- **OpenWeatherMap** membantu menjawab: “Bagaimana konteks cuaca dan udara di sekitar kota?”
+- **OpenWeatherMap** membantu menjawab: “Bagaimana konteks cuaca dan angin di sekitar kota?”
+- **IQAir AirVisual** menyediakan AQI US dari stasiun terdekat; sensor tidak selalu berada tepat di pusat kota.
 - **CNN** menjawab: “Apakah pola pada gambar lebih mirip contoh area terbakar atau tidak?”
 
 ## 3. Fitur aplikasi
@@ -34,13 +35,14 @@ Proyek ini memisahkan ketiganya secara jelas:
 - Pengguna dapat memilih rentang 24 atau 48 jam.
 - Sidebar menampilkan jumlah titik, observasi terbaru, rentang waktu, dan sumber data.
 - Klik titik untuk melihat koordinat, waktu pengamatan, dan satelit yang digunakan.
+- NOAA-20 dan NOAA-21 adalah satelit berbeda. Waktu lintasan dan cakupannya berbeda, jadi jumlah observasi N20 dan N21 tidak harus sama; angka tersebut bukan jumlah kebakaran unik.
 - Animasi asap adalah **ilustrasi arah pergerakan berdasarkan data angin**, bukan peta konsentrasi asap yang terukur.
 
 ### B. Kondisi kota
 
-Kartu kota menampilkan suhu, deskripsi cuaca, kelembapan, kecepatan angin, PM2.5, PM10, dan indeks udara OpenWeatherMap.
+Kartu kota menampilkan suhu, deskripsi cuaca, kelembapan, kecepatan angin, AQI US IQAir, PM2.5, dan PM10.
 
-Indeks OpenWeatherMap memiliki skala **1–5**, bukan angka AQI 0–500 seperti yang dapat ditemukan pada layanan lain. Karena itu, aplikasi tidak boleh menyebut indeks ini sebagai data IQAir atau BMKG.
+AQI pada kartu memakai skala **US AQI** dari IQAir. Cuaca dan angin tetap berasal dari OpenWeatherMap.
 
 ### C. Verifikasi citra
 
@@ -88,7 +90,7 @@ Contoh kalimat yang aman saat presentasi:
 - NASA FIRMS adalah observasi satelit, bukan pengukuran langsung dari lapangan.
 - Satu titik panas tidak menjelaskan ukuran api, penyebab, atau tingkat bahayanya.
 - Data OpenWeatherMap bersifat regional pada koordinat kota dan tidak menggantikan stasiun pemantauan kualitas udara.
-- API IQAir/BMKG belum terintegrasi; aplikasi tidak mengklaim data OWM sebagai data IQAir/BMKG.
+- IQAir terintegrasi untuk 16 kota, tetapi ketersediaan stasiun dan kuota API dapat membuat sebagian AQI tidak tersedia.
 - Model produksi masih memiliki dua kelas: `wildfire` dan `nowildfire`.
 - Perubahan arsitektur CNN belum dapat disebut meningkatkan akurasi sebelum training ulang, test split independen, confusion matrix, dan metrik per kelas dilakukan.
 - Animasi asap pada peta hanya visualisasi arah angin, bukan simulasi dispersi atmosfer.
@@ -100,6 +102,7 @@ Backend membutuhkan environment variable:
 ```env
 FIRMS_KEY=...
 OWM_KEY=...
+IQAIR_KEY=...
 PYTHON_BIN=python
 ```
 
@@ -124,7 +127,7 @@ npm run dev
 1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
 2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
 3. Tunjukkan animasi asap, lalu tekankan bahwa itu ilustrasi arah angin.
-4. Buka **Kondisi kota** dan tunjukkan perbedaan antara indeks OWM 1–5 dan AQI 0–500.
+4. Buka **Kondisi kota** dan jelaskan bahwa AQI US berasal dari IQAir, sedangkan cuaca dan angin berasal dari OpenWeatherMap.
 5. Buka **Verifikasi citra**, unggah satu gambar, lalu jelaskan hasil CNN sebagai bantuan awal.
 6. Tutup dengan batasan sistem dan rencana validasi model.
 

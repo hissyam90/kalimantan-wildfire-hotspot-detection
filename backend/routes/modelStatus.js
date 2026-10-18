@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 module.exports = (req, res) => {
-  const configured = process.env.RGB_MODEL_PATH || path.join(__dirname, '..', 'python', 'model', 'wildfire_model.h5');
+  const configured = process.env.RGB_MODEL_PATH || path.join(__dirname, '..', 'model', 'wildfire_model.h5');
   const modelPath = path.resolve(configured);
   let available = false;
   try { available = Boolean(modelPath && fs.statSync(modelPath).isFile()); } catch { /* absent */ }
