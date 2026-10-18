@@ -3,13 +3,13 @@ import axios from 'axios';
 import { API_URL } from './config';
 
 function aqiLabel(value) {
-  if (value == null) return 'AQI unavailable';
-  if (value <= 50) return 'Good';
-  if (value <= 100) return 'Moderate';
-  if (value <= 150) return 'Unhealthy for sensitive groups';
-  if (value <= 200) return 'Unhealthy';
-  if (value <= 300) return 'Very unhealthy';
-  return 'Hazardous';
+  if (value == null) return 'AQI tidak tersedia';
+  if (value <= 50) return 'Baik';
+  if (value <= 100) return 'Sedang';
+  if (value <= 150) return 'Tidak sehat untuk kelompok sensitif';
+  if (value <= 200) return 'Tidak sehat';
+  if (value <= 300) return 'Sangat tidak sehat';
+  return 'Berbahaya';
 }
 function aqiClass(value) { return value == null ? '' : value <= 50 ? 'air-good' : value <= 100 ? 'air-moderate' : 'air-poor'; }
 

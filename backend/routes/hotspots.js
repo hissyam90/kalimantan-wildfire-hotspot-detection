@@ -78,7 +78,8 @@ async function handler(req, res) {
     const windowStart = now - hours * 3600 * 1000;
     const hotspots = rows.filter((row) => row.ts >= windowStart).map((row) => ({
       lat: row.lat, lon: row.lon,
-      date: row.date, time: row.time, observedAt: new Date(row.ts).toISOString(),
+      date: row.date, time: row.time, satellite: row.satellite,
+      observedAt: new Date(row.ts).toISOString(),
     }));
     return res.json({ days, hours, source: 'NASA FIRMS VIIRS NOAA-20/NOAA-21 NRT', dataType: 'active-fire point observations',
       coverage: COVERAGE, confidenceNote: 'Confidence adalah kategori deteksi FIRMS, bukan probabilitas pasti dan bukan confidence CNN.',

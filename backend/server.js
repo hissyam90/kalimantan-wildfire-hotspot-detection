@@ -1,11 +1,11 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 const express = require('express');
 const multer = require('multer');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { spawn } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 
 const app = express();
 
