@@ -47,7 +47,7 @@ npm run dev
 <pre>
 1. <b>NASA FIRMS      :</b> <a href="https://firms.modaps.eosdis.nasa.gov/api/map_key" target="_blank">https://firms.modaps.eosdis.nasa.gov/api/map_key</a>
 2. <b>OpenWeatherMap  :</b> <a href="https://openweathermap.org" target="_blank">https://openweathermap.org</a>
-3. <b>WAQI :</b> <a href="https://aqicn.org/api/" target="_blank">https://aqicn.org/api/</a>
+3. <b>WAQI            :</b> <a href="https://aqicn.org/api/" target="_blank">https://aqicn.org/api/</a>
 </pre>
 
 #
