@@ -125,7 +125,7 @@ body {
   overflow-y: auto;
 }
 
-.map-area { flex: 1; position: relative; }
+.map-area { flex: 1; position: relative; min-width: 0; min-height: 420px; }
 .map-filters { display: grid; gap: 6px; margin-bottom: 16px; }
 .satellite-breakdown { display: grid; gap: 6px; margin-top: 14px; }
 .satellite-stat { display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 7px; padding: 7px 8px; color: var(--text); background: transparent; border: 1px solid var(--divider); text-align: left; font: inherit; font-size: 11px; cursor: pointer; }
@@ -534,7 +534,8 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .globe-stage::before, .globe-stage::after { content: ''; position: absolute; width: 5px; height: 5px; border-radius: 50%; background: #a9d7ff; box-shadow: 0 0 12px #a9d7ff; opacity: .7; }
 .globe-stage::before { top: 18%; left: 18%; }.globe-stage::after { right: 17%; bottom: 18%; }
 .globe-sphere { position: relative; z-index: 1; width: min(70vw, 460px); aspect-ratio: 1; border-radius: 50%; overflow: hidden; cursor: default; user-select: none; box-shadow: inset -35px -25px 65px rgba(0,0,0,.42), 0 0 45px rgba(67,153,221,.3); }
-.globe-earth { position: absolute; inset: 0; background-color: #326b55; background-image: linear-gradient(135deg, #1a5272 0%, #2f7d63 42%, #9b8950 57%, #1b5875 100%); background-size: auto 100%; background-repeat: repeat-x; }
+.globe-earth { position: absolute; inset: 0; overflow: hidden; background-color: #326b55; background-image: linear-gradient(135deg, #1a5272 0%, #2f7d63 42%, #9b8950 57%, #1b5875 100%); }
+.globe-earth-image { position: absolute; top: 0; left: -114.44%; width: 200%; max-width: none; height: 100%; object-fit: fill; display: block; }
 .globe-shade { position: absolute; inset: 0; border-radius: 50%; background: radial-gradient(circle at 32% 28%, transparent 28%, rgba(0,0,0,.03) 52%, rgba(0,0,0,.42) 100%); pointer-events: none; }
 .kalimantan-focus { position: absolute; z-index: 1; left: 50%; top: 49%; width: 28px; height: 20px; border: 1px solid rgba(255,210,112,.95); border-radius: 50%; transform: translate(-50%, -50%) rotate(-18deg); box-shadow: 0 0 0 5px rgba(255,210,112,.08), 0 0 18px rgba(255,190,80,.55); pointer-events: none; }
 .globe-hotspot { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #ffb14e; box-shadow: 0 0 0 4px rgba(255,177,78,.2), 0 0 14px #ff7b38; transform: translate(-50%, -50%); }
