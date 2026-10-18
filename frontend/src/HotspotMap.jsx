@@ -51,7 +51,7 @@ function daynightLabel(d) {
 }
 
 function aqiLabel(aqi) {
-  return ({ 1: 'Baik', 2: 'Sedang', 3: 'Kurang sehat', 4: 'Tidak sehat', 5: 'Sangat tidak sehat' })[aqi] || 'Tidak tersedia';
+  return ({ 1: 'rendah', 2: 'sedang', 3: 'meningkat', 4: 'tinggi', 5: 'sangat tinggi' })[aqi] || 'tidak tersedia';
 }
 
 function formatTime(t) {
@@ -105,18 +105,18 @@ function HotspotPopup({ h, windGrid }) {
       <div className="popup-row"><span>Satelit</span><span>{h.satellite || '-'}</span></div>
       {nearest?.airQuality && <div className="popup-row"><span>AQI regional terdekat</span><span>{aqiLabel(nearest.airQuality.aqi)}{nearest.airQuality.pm2_5 == null ? '' : ` · PM2.5 ${nearest.airQuality.pm2_5} µg/m³`}</span></div>}
       <div className="popup-row"><span>Observasi UTC</span><span>{h.date} {formatTime(h.time)}</span></div>
-      <p>Confidence FIRMS adalah kategori deteksi, bukan probabilitas kebakaran.</p>
+      <p className="popup-note">FIRMS adalah observasi satelit, bukan kepastian kebakaran lapangan.</p>
 
       {nearest && (
         <>
           <div className="popup-divider" />
-          <p>Cuaca regional, bukan pengukuran pada titik hotspot.</p>
+          <p className="popup-note">Cuaca dan udara diambil dari kota acuan terdekat.</p>
           <div className="popup-row"><span>Wilayah acuan</span><span>{nearest.name} (±{Math.round(dist)} km)</span></div>
           <div className="popup-row"><span>Suhu</span><span>{nearest.temp != null ? `${nearest.temp}°C` : '-'}</span></div>
           <div className="popup-row"><span>Kelembapan</span><span>{nearest.humidity != null ? `${nearest.humidity}%` : '-'}</span></div>
           <div className="popup-row"><span>Cuaca</span><span>{nearest.description || '-'}</span></div>
           <div className="popup-row"><span>Arah angin</span><span>{degToCompass(nearest.windDeg)} ({nearest.windSpeed} m/s)</span></div>
-          <div className="popup-row"><span>AQI regional</span><span>{nearest.airQuality?.aqi ? `${nearest.airQuality.aqi}/5` : 'Tidak tersedia'}</span></div>
+          <div className="popup-row"><span>Kualitas udara OWM</span><span>{nearest.airQuality?.aqi ? `${aqiLabel(nearest.airQuality.aqi)} (${nearest.airQuality.aqi}/5)` : 'Tidak tersedia'}</span></div>
           <div className="popup-row"><span>PM2.5</span><span>{nearest.airQuality?.pm2_5 != null ? `${nearest.airQuality.pm2_5} µg/m³` : 'Tidak tersedia'}</span></div>
         </>
       )}
@@ -221,6 +221,7 @@ export default function HotspotMap() {
   }, [smokeEnabled, windGrid, hotspots]);
 
   const highConfidence = stats.confidenceCounts['Tinggi'] || 0;
+  const palangkaraya = nearestWind(-2.21, 113.92, windGrid);
 
   return (
     <div className="map-layout">
@@ -293,6 +294,19 @@ export default function HotspotMap() {
               </div>
             )}
 
+            {palangkaraya && (
+              <section className="air-card" aria-label="Cuaca dan kualitas udara Palangkaraya">
+                <div className="air-card-heading"><span>Palangkaraya</span><span className="air-card-source">OpenWeatherMap</span></div>
+                <div className="air-main"><strong>{palangkaraya.temp != null ? `${Math.round(palangkaraya.temp)}°` : '--'}</strong><span>{palangkaraya.description || 'Cuaca tidak tersedia'}</span></div>
+                <div className="air-metrics">
+                  <span>PM2.5 <b>{palangkaraya.airQuality?.pm2_5 ?? '--'}</b> µg/m³</span>
+                  <span>PM10 <b>{palangkaraya.airQuality?.pm10 ?? '--'}</b> µg/m³</span>
+                  <span>Udara <b>{aqiLabel(palangkaraya.airQuality?.aqi)}</b></span>
+                </div>
+                <p className="air-card-note">Indeks OWM skala 1–5 dan data regional; bisa berbeda dari kondisi asap yang terlihat di lapangan.</p>
+              </section>
+            )}
+
             <label className="toggle-row">
               <span>Animasi asap indikatif</span>
               <input
@@ -301,13 +315,7 @@ export default function HotspotMap() {
                 onChange={(e) => setSmokeEnabled(e.target.checked)}
               />
             </label>
-            <p className="toggle-hint">Bukan simulasi dispersi asap atau prediksi kualitas udara. Animasi menggunakan angin regional.</p>
             <p className="stats-note" role="status">{windStatus}</p>
-            <p className="stats-note">Cakupan dashboard: Kalimantan/Borneo dan sekitarnya, bukan hanya Kalimantan Timur. Cache FIRMS berlaku 10 menit; NRT bukan observasi kontinu.</p>
-            <ul className="legend" aria-label="Status sumber FIRMS">
-              {sources.map((source) => <li key={source.product}>{source.product}: {source.status === 'available' ? 'tersedia saat pengambilan' : 'gagal — cakupan data parsial'}</li>)}
-            </ul>
-            <p className="stats-note">Confidence FIRMS adalah kategori deteksi (tinggi, nominal, rendah), bukan probabilitas terkalibrasi dan bukan confidence CNN.</p>
 
             <h3 className="panel-subheading">Sebaran tingkat keyakinan</h3>
             <div className="chart-box">
@@ -343,10 +351,7 @@ export default function HotspotMap() {
               </ResponsiveContainer>
             </div>
 
-            <p className="stats-note">
-              Sumber titik panas: NASA FIRMS (VIIRS NRT), bukan prediksi CNN. Brightness temperature bukan suhu api langsung; FRP adalah daya radiatif (MW). Cuaca, AQI & arah angin: OpenWeatherMap,
-              dari 10 titik referensi regional terdekat.
-            </p>
+            <p className="stats-note">Titik pada peta berasal dari NASA FIRMS. Klik titik untuk melihat detail observasi.</p>
           </>
         )}
       </aside>

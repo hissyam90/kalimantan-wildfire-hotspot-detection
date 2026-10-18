@@ -157,11 +157,35 @@ body {
 .legend-dot { width: 8px; height: 8px; display: inline-block; }
 
 .stats-note {
-  margin-top: 20px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 11px;
   color: var(--muted);
   line-height: 1.5;
 }
+
+.air-card {
+  margin: 18px 0 6px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 45%, var(--panel-bg));
+}
+
+.air-card-heading, .air-main, .air-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.air-card-heading { font-size: 13px; font-weight: 600; }
+.air-card-source { color: var(--muted); font-size: 10px; font-weight: 400; }
+.air-main { align-items: baseline; margin: 10px 0; }
+.air-main strong { font-size: 28px; font-weight: 500; }
+.air-main span { color: var(--muted); font-size: 12px; text-transform: capitalize; }
+.air-metrics { align-items: flex-start; font-size: 10px; color: var(--muted); }
+.air-metrics span { display: flex; flex-direction: column; gap: 2px; }
+.air-metrics b { color: var(--text); font-size: 12px; font-weight: 500; }
+.air-card-note { margin: 10px 0 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
 
 .muted { color: var(--muted); font-size: 13px; }
 
@@ -280,6 +304,9 @@ body {
   border-top: 1px solid #E5E3DA;
   margin: 6px 0;
 }
+
+.popup-note { color: #6B7066; font-size: 11px; line-height: 1.4; }
+.verify-intro { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
 
 .toggle-row {
   display: flex;

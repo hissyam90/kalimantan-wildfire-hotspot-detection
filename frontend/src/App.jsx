@@ -23,8 +23,8 @@ function App() {
       </header>
 
       <nav className="tabs">
-        <button aria-pressed={tab === 'map'} className={tab === 'map' ? 'tab active' : 'tab'} onClick={() => setTab('map')}>Peta FIRMS · Kalimantan</button>
-        <button aria-pressed={tab === 'verify'} className={tab === 'verify' ? 'tab active' : 'tab'} onClick={() => setTab('verify')}>Klasifikasi RGB · eksperimen</button>
+        <button aria-pressed={tab === 'map'} className={tab === 'map' ? 'tab active' : 'tab'} onClick={() => setTab('map')}>Peta hotspot</button>
+        <button aria-pressed={tab === 'verify'} className={tab === 'verify' ? 'tab active' : 'tab'} onClick={() => setTab('verify')}>Verifikasi citra</button>
       </nav>
 
       <main className={tab === 'map' ? 'content content-full' : 'content content-verify'}>

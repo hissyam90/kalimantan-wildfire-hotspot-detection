@@ -71,14 +71,14 @@ export default function ImageVerification() {
 
   return (
     <section className="verify-panel">
-      <p>Model RGB lama eksperimental — bukan CNN patch termal VIIRS. Hasil ini tidak berasal dari peta FIRMS, bukan validasi hotspot geospasial, dan bukan bukti kebakaran lapangan.</p>
+      <p className="verify-intro">Unggah gambar untuk melihat klasifikasi model RGB.</p>
       <div className="verify-grid">
         <div>
           <label className="dropzone" htmlFor="file-input">
             {preview ? (
               <img src={preview} alt="Pratinjau citra" className="preview" />
             ) : (
-              <span className="dropzone-text">Pilih gambar RGB untuk model lama (.jpg, .png). Hindari mengunggah data sensitif.</span>
+              <span className="dropzone-text">Pilih gambar RGB (.jpg atau .png)</span>
             )}
           </label>
           <input
@@ -107,7 +107,7 @@ export default function ImageVerification() {
                 <span className="result-label">Skor model (tidak terkalibrasi)</span>
                 <span className="result-value mono">{(result.confidence * 100).toFixed(1)}%</span>
               </div>
-              <p className="stats-note">Kelas di atas adalah klasifikasi gambar, bukan titik hotspot. Skor bukan probabilitas terkalibrasi; provenance dan akurasi model lama belum terverifikasi dalam repository.</p>
+              <p className="stats-note">Ini klasifikasi gambar, bukan lokasi hotspot atau konfirmasi kebakaran.</p>
 
               <div className="bars">
                 {result.probabilities.map((p) => (
