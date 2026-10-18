@@ -55,8 +55,6 @@ graph TD
     TrainDir --> ValidSplit["Generator Validation Aktual (3.025 gambar)"]
     
     TestDir --> TestSplit["Generator Test (6.300 gambar)"]
-    
-    style ValidDir fill:#ffb3ff,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
 ```
 *Catatan: Folder `/valid` bawaan dataset asli tidak digunakan oleh generator final, melainkan digantikan oleh validation split internal dari folder `train`.*
 
@@ -88,9 +86,6 @@ graph TD
     Pool --> Dense1["Dense Layer: 128 Node + ReLU"]
     Dense1 --> Dense2["Dense Layer: 128 Node + ReLU"]
     Dense2 --> Output["Dense Output: 2 Node + Softmax"]
-
-    style Backbone fill:#ccccff,stroke:#333,stroke-width:2px
-    style Output fill:#ccffcc,stroke:#333,stroke-width:2px
 ```
 
 **Konfigurasi Compile:**
@@ -117,10 +112,6 @@ graph TD
     TrainFinal --> Eval["Evaluasi Akhir Pada Test Set 6.300 Gambar"]
     Eval --> Save["Simpan Artefak: wildfire_model.h5 dan labels.json"]
     Save --> End([Selesai])
-
-    style TrainA fill:#ffffff,stroke:#333
-    style ValidA fill:#ffffff,stroke:#333
-    style TestA fill:#ffffff,stroke:#333
 ```
 
 ## 6. Hasil perbandingan backbone
