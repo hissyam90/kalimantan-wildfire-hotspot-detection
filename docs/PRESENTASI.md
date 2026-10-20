@@ -4,6 +4,8 @@
 
 Dokumen ini menjadi acuan singkat untuk menjelaskan tujuan, cara kerja, sumber data, hasil yang ditampilkan, dan batasan aplikasi kepada dosen atau penguji.
 
+Naskah bicara per poin syarat UTS (1-6) tersedia di [NASKAH_PRESENTASI.md](NASKAH_PRESENTASI.md).
+
 ---
 
 ## 1. Gagasan utama
@@ -56,7 +58,7 @@ Titik pantauan yang digunakan adalah Pontianak, Singkawang, Ketapang, Palangkara
 
 ### Fokus presentasi: Model/Prototype dan preprocessing
 
-Bagian CNN yang terhubung ke prototype adalah **model klasifikasi RGB berbasis MobileNetV2** yang disimpan sebagai `backend/model/wildfire_model.h5`. Model ini menerima satu gambar dan memilih salah satu dari dua label: `wildfire` atau `nowildfire`. MobileNetV2 dipakai sebagai backbone transfer learning; hasil perbandingan satu epoch di notebook menunjukkan validation accuracy tertinggi dibandingkan kandidat DenseNet121 dan EfficientNetB0, lalu model dilatih ulang dengan early stopping.
+Bagian CNN yang terhubung ke prototype adalah **model klasifikasi RGB berbasis MobileNetV2** yang disimpan sebagai `backend/model/wildfire_model.h5`. Model ini menerima satu gambar dan memilih salah satu dari dua label: `wildfire` atau `nowildfire`. MobileNetV2 dipakai sebagai backbone transfer learning yang dibekukan. Pada output notebook yang tersimpan, seleksi satu epoch justru memilih MobileNet (V1) dengan validation accuracy 0,9640, sedangkan MobileNetV2 berada di peringkat kesembilan dari 27 kandidat dengan 0,9544. Artefak yang diekspor adalah MobileNetV2 dan sudah dilatih empat epoch, tetapi metrik validasi dan test-nya tidak tercatat. Karena itu jangan menyebut MobileNetV2 sebagai model paling akurat.
 
 Alur preprocessing pada saat inferensi adalah:
 
@@ -66,7 +68,7 @@ Alur preprocessing pada saat inferensi adalah:
 4. Nilai piksel diproses dengan `tf.keras.applications.mobilenet_v2.preprocess_input`, kemudian ditambah dimensi batch menjadi `[1, 224, 224, 3]`.
 5. Model menghasilkan skor untuk dua kelas. Label dengan skor terbesar ditampilkan bersama confidence, margin skor, ukuran asli gambar, jumlah parameter, dan waktu inferensi.
 
-Saat menjelaskan hasil, gunakan kalimat **“skor kemiripan terhadap pola pada data latihan”**, bukan “probabilitas pasti terjadi kebakaran”. Angka akurasi 97% pada laporan training adalah hasil test split dataset Kaggle, bukan jaminan performa pada citra baru di lapangan.
+Saat menjelaskan hasil, gunakan kalimat **“skor kemiripan terhadap pola pada data latihan”**, bukan “probabilitas pasti terjadi kebakaran”. Angka 97,86% yang muncul di output notebook adalah test accuracy untuk MobileNet (V1), bukan untuk MobileNetV2 yang dipakai aplikasi. Metrik test artefak deployment belum diukur, jadi tidak ada angka akurasi test yang boleh diklaim untuk model produksi.
 
 > **Catatan penting agar tidak tertukar:** folder `training/` berisi baseline CNN patch termal VIIRS yang lebih baru untuk penelitian. Pipeline tersebut sudah memiliki validasi manifest, split berbasis group, dan metrik test, tetapi belum terhubung ke `/api/predict` dan belum memiliki hasil training lapangan yang boleh diklaim sebagai model prototype.
 

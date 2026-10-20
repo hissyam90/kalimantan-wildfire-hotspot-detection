@@ -209,7 +209,7 @@ Titik acuan cuaca: 10 kota (Pontianak, Singkawang, Ketapang, Palangka Raya, Samp
 - Transfer learning: basis pretrained ImageNet (dibekukan, `include_top=False`, `pooling='avg'`), lalu `Dense(128, relu)` dua kali dan `Dense(2, softmax)`.
 - Optimizer Adam, loss `categorical_crossentropy`, metrik `accuracy`.
 - Seleksi arsitektur: setiap kandidat dilatih 1 epoch lalu dibandingkan dengan `val_accuracy`; arsitektur terbaik dilatih ulang maksimal 5 epoch dengan `EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)`.
-- Model terpilih: MobileNetV2. Diekspor ke `wildfire_model.h5` dan `labels.json` (`{"0": "nowildfire", "1": "wildfire"}`).
+- Artefak deployment: MobileNetV2 dengan 2.438.722 parameter. Catatan provenance: output notebook yang tersimpan justru memilih MobileNet (V1) 0,9640; MobileNetV2 0,9544 di peringkat 9 dari 27 kandidat. State optimizer artefak MobileNetV2 konsisten dengan 4 epoch training, tetapi metrik test-nya belum diukur. Diekspor ke `wildfire_model.h5` dan `labels.json` (`{"0": "nowildfire", "1": "wildfire"}`).
 
 ### 11.3 Inferensi di produksi
 
@@ -225,15 +225,16 @@ Titik di peta berasal dari FIRMS, bukan dari CNN. CNN dipakai sebagai alat verif
 
 | Model | val_accuracy | Waktu latih (detik) |
 |---|---|---|
-| MobileNetV2 | 0.9557 | 115.66 |
-| DenseNet121 | 0.9534 | 150.70 |
-| EfficientNetB0 | 0.8555 | 125.07 |
+| MobileNet (V1), peringkat 1 | 0,9640 | 114,04 |
+| DenseNet121, peringkat 4 | 0,9590 | 276,70 |
+| MobileNetV2, peringkat 9 | 0,9544 | 118,69 |
+| EfficientNetB0, peringkat 26 | 0,6443 | 124,30 |
 
-Catatan: ini akurasi validasi, bukan test. Judul grafik pada notebook ("Accuracy on the test set") tidak sesuai dengan kolom yang digambar.
+Catatan: notebook membandingkan 27 kandidat, bukan tiga. Angka di atas adalah `val_accuracy` setelah 1 epoch. Judul grafik pada notebook ("Accuracy on the test set") tidak sesuai dengan kolom yang digambar. Selisih MobileNet V1 dan MobileNetV2 hanya 0,0096 sehingga belum cukup untuk klaim keunggulan arsitektur.
 
 ### 12.2 Metrik yang masih harus dicatat untuk makalah
 
-Dari output notebook setelah pelatihan akhir, salin: akurasi pada data test, confusion matrix ternormalisasi, serta precision, recall, dan F1 per kelas (`classification_report` sudah diimpor, tinggal dijalankan).
+Output notebook sudah mencetak test accuracy 97,86% dan confusion matrix ternormalisasi, tetapi angka itu milik MobileNet (V1), bukan MobileNetV2 yang diekspor. `classification_report` hanya diimpor, tidak pernah dijalankan, sehingga precision, recall, dan F1 per kelas belum ada. Metrik test untuk artefak deployment harus diukur ulang.
 
 ### 12.3 Metrik operasional (dari log backend)
 
@@ -253,7 +254,7 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 | 2 | Arsitektur sistem | Bagian 8 | Draft siap |
 | 3 | Flowchart | Bagian 9 | Draft siap |
 | 4 | Pseudocode atau algoritma | Lampiran A | Draft siap |
-| 5 | Metrik evaluasi | Bagian 12 | Perlu angka test dari notebook |
+| 5 | Metrik evaluasi | Bagian 12 | Akurasi test MobileNet V1 ada (97,86%); metrik model deployment belum diukur |
 | 6 | Model atau prototype | Website live dan repositori | Selesai |
 
 ## 14. Keterbatasan dan risiko
@@ -263,7 +264,7 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 3. Data NRT diproses sekitar 3 jam setelah satelit lewat dan satelit hanya lewat sekitar dua kali sehari (sekitar 05-06 UTC dan 17-18 UTC di Kalimantan), jadi data bersifat hampir real-time, bukan instan.
 4. Animasi asap adalah ilustrasi dari vektor angin permukaan yang diinterpolasi dari sedikit titik acuan, bukan model dispersi atmosfer.
 5. AQI adalah estimasi dari konsentrasi saat ini, sedangkan skala EPA aslinya memakai rata-rata 24 jam. Nilainya dapat berbeda dari ISPU resmi.
-6. Dataset pelatihan bersifat global dan umum, bukan khusus Kalimantan Timur.
+6. Dataset pelatihan adalah citra satelit Kanada (Quebec) berukuran 350x350 piksel, bukan citra Kalimantan; tidak ada validasi pada citra lokal.
 7. Model dimuat ulang pada setiap permintaan prediksi; ini menambah latensi dan memori.
 8. Cache berada di memori satu instance; restart server mengosongkannya.
 9. Hosting gratis memiliki sumber daya terbatas; aplikasi belum dirancang untuk mobile.
