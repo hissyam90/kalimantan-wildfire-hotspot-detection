@@ -4,7 +4,7 @@
 
 Dokumen ini menjadi acuan singkat untuk menjelaskan tujuan, cara kerja, sumber data, hasil yang ditampilkan, dan batasan aplikasi kepada dosen atau penguji.
 
-Naskah bicara per poin syarat UTS (1-6) tersedia di [NASKAH_PRESENTASI.md](NASKAH_PRESENTASI.md).
+Naskah bicara per poin syarat UTS (1-6) tersedia di [NASKAH_PRESENTASI.md](NASKAH_PRESENTASI.md), termasuk **peta alt-tab** di bagian A yang menunjukkan jendela dan tab mana yang dibuka pada setiap poin. Rincian teknis pelatihan ada di [MODEL_TRAINING.md](MODEL_TRAINING.md).
 
 ---
 
@@ -24,10 +24,10 @@ Informasi karhutla sering tersebar di beberapa sumber dan memakai istilah teknis
 
 Proyek ini memisahkan ketiganya secara jelas:
 
-- **NASA FIRMS** menjawab: “Di mana satelit mendeteksi titik panas?”
-- **OpenWeatherMap** membantu menjawab: “Bagaimana konteks cuaca dan angin di sekitar kota?”
+- **NASA FIRMS** menjawab: "Di mana satelit mendeteksi titik panas?"
+- **OpenWeatherMap** membantu menjawab: "Bagaimana konteks cuaca dan angin di sekitar kota?"
 - **WAQI** menyediakan AQI dan data partikulat dari stasiun terdekat; stasiun tidak selalu berada tepat di pusat kota.
-- **CNN** menjawab: “Apakah pola pada gambar lebih mirip contoh area terbakar atau tidak?”
+- **CNN** menjawab: "Apakah pola pada gambar lebih mirip contoh area terbakar atau tidak?"
 
 ## 3. Fitur aplikasi
 
@@ -52,15 +52,19 @@ Titik pantauan yang digunakan adalah Pontianak, Singkawang, Ketapang, Palangkara
 
 - Pengguna mengunggah gambar JPG/PNG.
 - Backend mengubah ukuran dan memproses gambar dengan model CNN.
-- Hasil ditampilkan sebagai dua kemungkinan: “terlihat seperti area terbakar” atau “tidak terlihat seperti area terbakar”.
+- Hasil ditampilkan sebagai dua kemungkinan: "terlihat seperti area terbakar" atau "tidak terlihat seperti area terbakar".
 - Skor adalah tingkat kecocokan terhadap data latihan dan belum tentu terkalibrasi sebagai probabilitas.
 - Hasil tidak memberikan koordinat, luas api, tingkat bahaya, atau kepastian bahwa api benar-benar ada.
 
-### Fokus presentasi: Model/Prototype dan preprocessing
+### Fokus presentasi: model, prototype, dan pra-pemrosesan
 
-Bagian CNN yang terhubung ke prototype adalah **model klasifikasi RGB berbasis MobileNetV2** yang disimpan sebagai `backend/model/wildfire_model.h5`. Model ini menerima satu gambar dan memilih salah satu dari dua label: `wildfire` atau `nowildfire`. MobileNetV2 dipakai sebagai backbone transfer learning yang dibekukan. Pada output notebook yang tersimpan, seleksi satu epoch justru memilih MobileNet (V1) dengan validation accuracy 0,9640, sedangkan MobileNetV2 berada di peringkat kesembilan dari 27 kandidat dengan 0,9544. Artefak yang diekspor adalah MobileNetV2 dan sudah dilatih empat epoch, tetapi metrik validasi dan test-nya tidak tercatat. Karena itu jangan menyebut MobileNetV2 sebagai model paling akurat.
+Bagian CNN yang terhubung ke prototype adalah **model klasifikasi RGB berbasis MobileNetV2** yang disimpan sebagai `backend/model/wildfire_model.h5`. Model ini menerima satu gambar dan memilih salah satu dari dua label: `wildfire` atau `nowildfire`.
 
-Alur preprocessing pada saat inferensi adalah:
+Notebook pelatihan membandingkan **tiga** arsitektur selama satu epoch: MobileNetV2, DenseNet121, dan EfficientNetB0. MobileNetV2 terpilih dengan `val_accuracy` **0,9557**, lalu dilatih ulang dan berhenti di epoch keempat dengan `val_accuracy` terbaik **0,9593**. Evaluasi pada test set menghasilkan **97,00%** untuk MobileNetV2. Angka itu sah untuk artefak yang dipakai aplikasi, karena evaluasi dilakukan pada model yang bobotnya sudah dipulihkan ke epoch terbaik — objek model yang sama kemudian disimpan sebagai `wildfire_model.h5`.
+
+Yang perlu disampaikan dengan jujur: selisih MobileNetV2 dengan DenseNet121 hanya 0,0023, dan perbandingan itu memakai fungsi normalisasi MobileNetV2 untuk semua kandidat sehingga bias ke MobileNetV2. Precision, recall, dan F1 per kelas belum diukur.
+
+Alur pra-pemrosesan pada saat inferensi adalah:
 
 1. Frontend mengirim gambar JPG/PNG melalui `POST /api/predict` dengan batas ukuran 5 MB.
 2. Backend menyimpan file sementara dan menjalankan `backend/python/infer.py`.
@@ -68,7 +72,7 @@ Alur preprocessing pada saat inferensi adalah:
 4. Nilai piksel diproses dengan `tf.keras.applications.mobilenet_v2.preprocess_input`, kemudian ditambah dimensi batch menjadi `[1, 224, 224, 3]`.
 5. Model menghasilkan skor untuk dua kelas. Label dengan skor terbesar ditampilkan bersama confidence, margin skor, ukuran asli gambar, jumlah parameter, dan waktu inferensi.
 
-Saat menjelaskan hasil, gunakan kalimat **“skor kemiripan terhadap pola pada data latihan”**, bukan “probabilitas pasti terjadi kebakaran”. Angka 97,86% yang muncul di output notebook adalah test accuracy untuk MobileNet (V1), bukan untuk MobileNetV2 yang dipakai aplikasi. Metrik test artefak deployment belum diukur, jadi tidak ada angka akurasi test yang boleh diklaim untuk model produksi.
+Saat menjelaskan hasil, gunakan kalimat **"skor kemiripan terhadap pola pada data latihan"**, bukan "probabilitas pasti terjadi kebakaran". Confidence dari softmax belum dikalibrasi.
 
 > **Catatan penting agar tidak tertukar:** folder `training/` berisi baseline CNN patch termal VIIRS yang lebih baru untuk penelitian. Pipeline tersebut sudah memiliki validasi manifest, split berbasis group, dan metrik test, tetapi belum terhubung ke `/api/predict` dan belum memiliki hasil training lapangan yang boleh diklaim sebagai model prototype.
 
@@ -115,7 +119,6 @@ classDiagram
     BackendExpress --> CNNPython : /api/predict
 ```
 
-
 Endpoint utama:
 
 | Endpoint | Kegunaan |
@@ -138,7 +141,7 @@ Urutan penggunaan yang disarankan:
 
 Contoh kalimat yang aman saat presentasi:
 
-> “Aplikasi ini tidak menyatakan bahwa setiap titik adalah kebakaran. Sistem menggabungkan observasi satelit, konteks cuaca dan udara, serta klasifikasi citra agar pengguna memiliki dasar pemeriksaan awal yang lebih jelas.”
+> "Aplikasi ini tidak menyatakan bahwa setiap titik adalah kebakaran. Sistem menggabungkan observasi satelit, konteks cuaca dan udara, serta klasifikasi citra agar pengguna memiliki dasar pemeriksaan awal yang lebih jelas."
 
 ## 6. Batasan penelitian
 
@@ -147,7 +150,10 @@ Contoh kalimat yang aman saat presentasi:
 - Data OpenWeatherMap bersifat regional pada koordinat kota dan tidak menggantikan stasiun pemantauan kualitas udara.
 - WAQI diintegrasikan untuk 17 titik pantauan, tetapi ketersediaan stasiun dan kuota API dapat membuat sebagian AQI tidak tersedia.
 - Model produksi masih memiliki dua kelas: `wildfire` dan `nowildfire`.
-- Perubahan arsitektur CNN belum dapat disebut meningkatkan akurasi sebelum training ulang, test split independen, confusion matrix, dan metrik per kelas dilakukan.
+- Dataset latih adalah citra satelit Kanada (Quebec, 350x350), bukan lanskap Kalimantan. Model sah sebagai demonstrasi metode, bukan alat operasional.
+- Augmentasi tidak aktif pada pelatihan, sehingga model lebih rentan terhadap variasi rotasi dan pencahayaan.
+- Precision, recall, dan F1 per kelas belum diukur; hanya accuracy dan confusion matrix.
+- Folder `valid` berisi 6.300 citra berlabel yang belum dipakai sebagai uji independen.
 - Animasi asap pada peta hanya visualisasi arah angin, bukan simulasi dispersi atmosfer.
 
 ## 7. Konfigurasi dan demo lokal
@@ -177,7 +183,7 @@ npm install
 npm run dev
 ```
 
-## 8. Alur demo 
+## 8. Alur demo
 
 1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
 2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
@@ -186,10 +192,16 @@ npm run dev
 5. Buka **Verifikasi citra**, unggah satu gambar, lalu jelaskan hasil CNN sebagai bantuan awal.
 6. Tutup dengan batasan sistem dan rencana validasi model.
 
+Perpindahan jendela dan tab untuk setiap langkah demo di atas diatur di [NASKAH_PRESENTASI.md §A](NASKAH_PRESENTASI.md#a-peta-alt-tab-jendela-mana-tab-mana-tunjuk-apa).
+
 ## 9. Pengembangan berikutnya
 
+- Mencabut token API Kaggle yang sempat tertulis di cell notebook, lalu memindahkannya ke Colab Secrets.
+- Mengaktifkan augmentasi dengan benar (parameter dipindah ke konstruktor generator).
+- Evaluasi precision, recall, F1-score, confusion matrix dalam bentuk angka, dan kalibrasi skor.
+- Memakai folder `valid` (6.300 citra) sebagai uji independen.
+- Menyimpan model dalam format native `.keras` dan memperbaiki konversi ONNX yang gagal karena konflik versi Protobuf.
+- Pengujian model pada citra Kalimantan dengan pemisahan train/validation/test yang independen.
 - Integrasi sumber kualitas udara resmi dengan lisensi dan API key yang sah.
 - Penambahan riwayat grafik PM2.5 dan PM10.
-- Pengujian model pada dataset berlabel dengan pemisahan train/validation/test yang independen.
-- Evaluasi precision, recall, F1-score, confusion matrix, dan kalibrasi skor.
 - Validasi visual dengan petugas atau data lapangan sebelum digunakan untuk keputusan operasional.

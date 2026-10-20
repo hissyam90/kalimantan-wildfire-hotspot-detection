@@ -208,8 +208,9 @@ Titik acuan cuaca: 10 kota (Pontianak, Singkawang, Ketapang, Palangka Raya, Samp
 
 - Transfer learning: basis pretrained ImageNet (dibekukan, `include_top=False`, `pooling='avg'`), lalu `Dense(128, relu)` dua kali dan `Dense(2, softmax)`.
 - Optimizer Adam, loss `categorical_crossentropy`, metrik `accuracy`.
-- Seleksi arsitektur: setiap kandidat dilatih 1 epoch lalu dibandingkan dengan `val_accuracy`; arsitektur terbaik dilatih ulang maksimal 5 epoch dengan `EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)`.
-- Artefak deployment: MobileNetV2 dengan 2.438.722 parameter. Catatan provenance: output notebook yang tersimpan justru memilih MobileNet (V1) 0,9640; MobileNetV2 0,9544 di peringkat 9 dari 27 kandidat. State optimizer artefak MobileNetV2 konsisten dengan 4 epoch training, tetapi metrik test-nya belum diukur. Diekspor ke `wildfire_model.h5` dan `labels.json` (`{"0": "nowildfire", "1": "wildfire"}`).
+- Seleksi arsitektur: **tiga** kandidat (MobileNetV2, DenseNet121, EfficientNetB0) masing-masing dilatih 1 epoch lalu dibandingkan dengan `val_accuracy`. MobileNetV2 terpilih dengan 0,9557, lalu dilatih ulang maksimal 5 epoch dengan `EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)` dan berhenti di epoch ke-4.
+- Artefak deployment: MobileNetV2 dengan 158 layer dan 2.438.722 parameter, seluruh backbone dibekukan. Rantai provenance terverifikasi: notebook menyimpan model berukuran 11.745.904 byte (output `ls -la`), dan berkas `backend/model/wildfire_model.h5` berukuran sama persis; `optimizer_weights/adam/iteration = 3404` sama dengan 851 batch x 4 epoch; `labels.json` (36 byte) berisi `{"0": "nowildfire", "1": "wildfire"}`.
+- Catatan pembanding: ada notebook lain dengan 27 backbone yang memilih MobileNet V1 (0,9640) dan melaporkan 97,86%. Notebook itu **bukan** sumber artefak dan angkanya tidak dipakai di dokumen ini.
 
 ### 11.3 Inferensi di produksi
 
@@ -225,16 +226,34 @@ Titik di peta berasal dari FIRMS, bukan dari CNN. CNN dipakai sebagai alat verif
 
 | Model | val_accuracy | Waktu latih (detik) |
 |---|---|---|
-| MobileNet (V1), peringkat 1 | 0,9640 | 114,04 |
-| DenseNet121, peringkat 4 | 0,9590 | 276,70 |
-| MobileNetV2, peringkat 9 | 0,9544 | 118,69 |
-| EfficientNetB0, peringkat 26 | 0,6443 | 124,30 |
+| **MobileNetV2** (terpilih) | **0,9557** | 115,66 |
+| DenseNet121 | 0,9534 | 150,70 |
+| EfficientNetB0 | 0,8555 | 125,07 |
 
-Catatan: notebook membandingkan 27 kandidat, bukan tiga. Angka di atas adalah `val_accuracy` setelah 1 epoch. Judul grafik pada notebook ("Accuracy on the test set") tidak sesuai dengan kolom yang digambar. Selisih MobileNet V1 dan MobileNetV2 hanya 0,0096 sehingga belum cukup untuk klaim keunggulan arsitektur.
+Catatan: angka di atas adalah `val_accuracy` setelah 1 epoch pada 3.025 citra validasi, bukan akurasi test. Judul grafik pada notebook ("Accuracy on the test set") tidak sesuai dengan kolom yang digambar. Selisih MobileNetV2 dan DenseNet121 hanya 0,0023 (sekitar 7 citra), sehingga keunggulan yang meyakinkan adalah **efisiensi**, bukan akurasi. Perbandingan juga bias ke MobileNetV2 karena semua kandidat memakai `mobilenet_v2.preprocess_input`, padahal EfficientNetB0 mengharapkan skala 0-255 dengan normalisasi internalnya sendiri.
 
-### 12.2 Metrik yang masih harus dicatat untuk makalah
+Riwayat pelatihan final MobileNetV2 (maksimal 5 epoch, berhenti di epoch 4):
 
-Output notebook sudah mencetak test accuracy 97,86% dan confusion matrix ternormalisasi, tetapi angka itu milik MobileNet (V1), bukan MobileNetV2 yang diekspor. `classification_report` hanya diimpor, tidak pernah dijalankan, sehingga precision, recall, dan F1 per kelas belum ada. Metrik test untuk artefak deployment harus diukur ulang.
+| Epoch | Train accuracy | Val accuracy | Val loss |
+|---|---|---|---|
+| 1 | 0,9474 | 0,9540 | 0,1288 |
+| 2 | 0,9626 | 0,9574 | 0,1120 |
+| 3 | 0,9698 | **0,9593** | **0,1071** (terbaik) |
+| 4 | 0,9744 | 0,9547 | 0,1212 |
+
+`restore_best_weights=True` memulihkan bobot ke epoch 3, sehingga model yang disimpan adalah bobot epoch terbaik.
+
+### 12.2 Metrik pada test set
+
+| Metrik | Status |
+|---|---|
+| Accuracy test (6.300 citra) | **97,00%** untuk MobileNetV2 (6.111 benar, 189 salah) |
+| Confusion matrix ternormalisasi | Ada, tetapi hanya berupa gambar; angkanya tidak dicetak sebagai teks |
+| Precision, recall, F1 per kelas | Belum ada; `classification_report` diimpor tetapi tidak pernah dijalankan |
+| ROC/AUC dan kalibrasi skor | Belum ada |
+| Evaluasi folder `valid` | Belum pernah dihitung |
+
+Angka 97,00% sah untuk artefak deployment karena evaluasi test dijalankan pada objek model yang bobotnya sudah dipulihkan ke epoch terbaik, dan objek yang sama itulah yang disimpan ke `wildfire_model.h5`. Angka 97,86% milik MobileNet V1 dari notebook pembanding dan tidak boleh dikutip untuk model aplikasi.
 
 ### 12.3 Metrik operasional (dari log backend)
 
@@ -250,11 +269,11 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 
 | No | Syarat dosen | Bahan di proyek | Status |
 |---|---|---|---|
-| 1 | EDA dan pra-pemrosesan data | Notebook Kaggle dan bagian 11.1 | Bahan ada, tulisan makalah belum |
+| 1 | EDA dan pra-pemrosesan data | Notebook Colab dan bagian 11.1 | Siap; catatan augmentasi tidak aktif wajib disebut |
 | 2 | Arsitektur sistem | Bagian 8 | Draft siap |
 | 3 | Flowchart | Bagian 9 | Draft siap |
 | 4 | Pseudocode atau algoritma | Lampiran A | Draft siap |
-| 5 | Metrik evaluasi | Bagian 12 | Akurasi test MobileNet V1 ada (97,86%); metrik model deployment belum diukur |
+| 5 | Metrik evaluasi | Bagian 12 | Accuracy test 97,00% dan confusion matrix ada; precision/recall/F1 belum |
 | 6 | Model atau prototype | Website live dan repositori | Selesai |
 
 ## 14. Keterbatasan dan risiko
@@ -268,13 +287,20 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 7. Model dimuat ulang pada setiap permintaan prediksi; ini menambah latensi dan memori.
 8. Cache berada di memori satu instance; restart server mengosongkannya.
 9. Hosting gratis memiliki sumber daya terbatas; aplikasi belum dirancang untuk mobile.
+10. Augmentasi tidak pernah aktif karena parameternya ditulis di `flow_from_dataframe` dan diabaikan sebagai `**kwargs`.
+11. Konversi ONNX gagal pada konflik versi Protobuf, sehingga backend harus memakai Python dan TensorFlow di dalam kontainer.
+12. Skor softmax belum dikalibrasi; confidence tidak boleh disebut probabilitas kebakaran.
 
 ## 15. Backlog prioritas
 
 | Prioritas | Item |
 |---|---|
-| P0 | Rotasi kunci API (FIRMS dan OpenWeatherMap) dan token Kaggle yang pernah muncul di tangkapan layar atau percakapan |
-| P0 | Isi metrik test (akurasi, confusion matrix, precision, recall, F1) ke makalah |
+| P0 | **Cabut dan ganti token Kaggle** `KGAT_...` yang tertulis terbuka di cell 0 notebook Colab, lalu pindahkan ke Colab Secrets |
+| P0 | Rotasi kunci API (FIRMS dan OpenWeatherMap) yang pernah muncul di tangkapan layar atau percakapan |
+| P0 | Hitung precision, recall, F1 per kelas dan cetak confusion matrix sebagai angka |
+| P1 | Aktifkan augmentasi dengan memindahkan parameter ke konstruktor `ImageDataGenerator` atau memakai layer augmentasi |
+| P1 | Pakai folder `valid` (6.300 citra) sebagai uji independen |
+| P1 | Simpan model sebagai `.keras` dan perbaiki konversi ONNX (pin versi Protobuf) |
 | P1 | Fitur kualitas udara per kota (F5): endpoint stasiun, AQI dari PM2.5 dan PM10, lencana di peta, tab daftar kota |
 | P1 | Perbaiki bounding box (utara 4.5, barat 108.5) dan tambah titik acuan angin di pedalaman |
 | P1 | Tambahkan `app.set('trust proxy', 1)` di server.js agar batas laju dihitung per IP pengguna, bukan per proxy Railway |

@@ -1,354 +1,303 @@
 # Dokumentasi Training Model Klasifikasi Citra Wildfire
 
-Dokumen ini menjelaskan model RGB yang dipakai endpoint `POST /api/predict`. Isinya diverifikasi ulang pada 20 Oktober 2026 dari empat sumber:
+Dokumen ini menjelaskan **bagaimana model CNN yang dipakai aplikasi benar-benar dilatih**, bukan bagaimana seharusnya dilatih. Semua angka diambil dari output yang tersimpan di notebook pelatihan dan dari pembacaan langsung file model.
 
-- Notebook sumber: `E:\Coding\wildfire-kaggle\wildfire-prediction-dataset-satellite-images (1).ipynb` (berada di luar repository; output yang tersimpan berasal dari run 10 Februari 2023).
-- Artefak deployment: [`backend/model/wildfire_model.h5`](../backend/model/wildfire_model.h5) dan [`backend/model/labels.json`](../backend/model/labels.json), diperiksa langsung dengan `h5py`.
-- Script inference: [`backend/python/infer.py`](../backend/python/infer.py).
-- Endpoint backend: [`backend/server.js`](../backend/server.js).
+Terakhir diverifikasi: **20 Oktober 2026**.
 
-> **Status hasil:** angka di dokumen ini berasal dari output notebook yang tersimpan dan pembacaan artefak, bukan training ulang di mesin repository. Dataset sekitar 1,44 GiB (1,55 GB) tidak disimpan di repository. Notebook memakai path Kaggle `../input/...`, sehingga harus dijalankan di Kaggle/Colab dengan dataset terpasang.
+> **Ringkasan satu paragraf.** Model yang dipakai aplikasi adalah **MobileNetV2** hasil transfer learning. Notebook membandingkan **tiga** arsitektur selama satu epoch; MobileNetV2 menang tipis dengan `val_accuracy` **0,9557**, lalu dilatih ulang maksimal lima epoch dengan EarlyStopping dan berhenti di epoch keempat. Akurasi pada test set yang tercatat adalah **97,00%** untuk MobileNetV2. Angka itu sah untuk artefak yang disimpan, karena evaluasi test dilakukan pada model yang bobotnya sudah dipulihkan ke epoch terbaik, dan objek model yang sama itu yang kemudian di-`save()`.
 
-> **Catatan provenance (penting):** output notebook yang tersimpan memilih **MobileNet (V1)** sebagai model terbaik dan melaporkan test accuracy **97,86%** untuk model tersebut. Artefak yang dipakai aplikasi adalah **MobileNetV2**. State optimizer artefak MobileNetV2 konsisten dengan training 4 epoch pada split yang sama (`optimizer/iteration = 3404 = 851 batch × 4 epoch`), tetapi metrik per epoch dan metrik test-nya tidak tercatat di notebook. Karena itu angka 97,86% **tidak boleh** diklaim sebagai akurasi model yang dipakai aplikasi.
+---
 
-## 1. Tujuan model
+## 1. Sumber yang diverifikasi
 
-Model melakukan klasifikasi dua kelas pada gambar RGB:
+| Peran | Objek | Keterangan |
+|---|---|---|
+| **Sumber utama** | Notebook Colab `wildfire-prediction-dataset-satellite-images.ipynb` | [colab.research.google.com/drive/1NX43x-kH59Qu_nabDKVnKekNh4h-w9Se](https://colab.research.google.com/drive/1NX43x-kH59Qu_nabDKVnKekNh4h-w9Se?usp=sharing), 29 cell, output tersimpan |
+| **Artefak** | `backend/model/wildfire_model.h5` | 11.745.904 byte, Keras 3.13.2 |
+| **Label** | `backend/model/labels.json` | 36 byte, `{0: nowildfire, 1: wildfire}` |
+| **Kode inferensi** | `backend/python/infer.py` | pra-pemrosesan yang harus sama dengan saat training |
+| **Pembanding, bukan sumber artefak** | Notebook Kaggle `wildfire-prediction-dataset-satellite-images (1).ipynb` | 27 backbone, output lama; lihat §10 |
 
-| Label | Arti |
-|---|---|
-| `wildfire` | Pola gambar lebih dekat dengan contoh kelas wildfire pada dataset |
-| `nowildfire` | Pola gambar lebih dekat dengan contoh kelas nowildfire pada dataset |
+Waktu pelatihan notebook utama dapat dibaca dari output `ls -la` di cell 24: `Sep 27 19:33`. Ini bertepatan dengan tanggal berkas label dan model di repositori (`28 September 2026`), yang memperkuat bahwa kedua berkas berasal dari run yang sama.
 
-Model **bukan** pendeteksi koordinat hotspot, bukan segmentasi api, dan bukan pengukur luas atau tingkat bahaya kebakaran. Hasilnya hanya bantuan screening visual dan harus dibandingkan dengan peta hotspot NASA FIRMS, waktu observasi, sumber lapangan, dan konteks cuaca.
+## 2. Rantai provenance: artefak memang keluaran notebook ini
 
-## 2. Sumber dan pembagian data
+Ini bagian terpenting dokumen. Sebelumnya pernah ada kebingungan karena ada **dua** notebook dengan hasil berbeda. Tabel berikut menunjukkan bukti bahwa berkas `.h5` di repositori adalah keluaran notebook Colab di §1, bukan notebook 27 backbone.
 
-Dataset diambil dari Kaggle:
-
-> `abdelghaniaaba/wildfire-prediction-dataset` — *Wildfire Prediction Dataset (Satellite Images)*
-
-| Properti | Nilai (metadata Kaggle) |
-|---|---|
-| Jenis citra | Citra satelit 350×350 piksel dari area yang pernah mengalami kebakaran di Kanada (Quebec), diekstrak memakai MapBox API |
-| Jumlah citra | 42.850 gambar: 22.710 `wildfire` dan 20.140 `nowildfire` |
-| Ukuran unduhan | 1.550.112.972 byte ≈ 1,44 GiB (1,55 GB desimal) |
-| Lisensi | CC-BY 4.0 (data asal Quebec) |
-| Jumlah kelas | 2 |
-
-Struktur folder yang dibaca notebook (path Kaggle, bukan `/content/dataset`):
-
-```text
-../input/wildfire-prediction-dataset/
-├── train/
-│   ├── nowildfire/
-│   └── wildfire/      # total 30.250 gambar
-├── valid/
-│   ├── nowildfire/
-│   └── wildfire/      # total 6.300 gambar
-└── test/
-    ├── nowildfire/
-    └── wildfire/      # total 6.300 gambar
-```
-
-### Pembagian data yang benar-benar dipakai
-
-Notebook memuat ketiga folder ke DataFrame `(Filepath, Label)`, lalu membentuk generator dengan `ImageDataGenerator(validation_split=0.1, seed=0)`:
+| Bukti | Yang tercatat di notebook | Yang ada di repositori | Cocok |
+|---|---|---|---|
+| Ukuran berkas model | cell 24: `11745904` byte | `wildfire_model.h5` = 11.745.904 byte | ✅ |
+| Isi label | cell 22: `{0: 'nowildfire', 1: 'wildfire'}` | `labels.json` 36 byte, isi identik | ✅ |
+| Jumlah langkah optimizer | cell 18: 851 batch × 4 epoch = 3.404 | `optimizer_weights/adam/iteration = 3404` | ✅ |
+| Arsitektur | cell 15 + 18: MobileNetV2 | `dense_9` 1.280→128, 158 layer | ✅ |
+| Metrik test | cell 20: `97.00% accuracy on the test set` | tidak tersimpan di berkas, hanya di notebook | — |
 
 ```mermaid
-graph TD
-    Kaggle["Dataset Kaggle: 42.850 gambar"] --> TrainDir["Folder /train (30.250 gambar)"]
-    Kaggle --> TestDir["Folder /test (6.300 gambar)"]
-    Kaggle --> ValidDir["Folder /valid (6.300 gambar)"]
-
-    TrainDir --> TrainSplit["Generator train (27.225 gambar, 90%)"]
-    TrainDir --> ValidSplit["Generator validation (3.025 gambar, 10%)"]
-
-    TestDir --> TestSplit["Generator test (6.300 gambar, shuffle=False)"]
-    ValidDir -.-> Unused["Dimuat dan divisualisasikan, tidak dipakai training/evaluasi"]
+flowchart LR
+    A["Kaggle dataset<br/>1,45 GB"] --> B["cell 12<br/>ImageDataGenerator<br/>224×224, batch 32"]
+    B --> C["cell 14<br/>3 kandidat × 1 epoch"]
+    C --> D["cell 15<br/>MobileNetV2 0,9557<br/>terbaik"]
+    D --> E["cell 18<br/>MobileNetV2<br/>maks 5 epoch, berhenti di 4"]
+    E --> F["cell 20<br/>test 6.300 gambar<br/>97,00%"]
+    F --> G["cell 22<br/>save wildfire_model.h5<br/>+ labels.json"]
+    G --> H["backend/model/<br/>11.745.904 byte"]
+    H --> I["infer.py<br/>API /api/predict"]
 ```
 
-| Generator | Jumlah gambar | Keterangan |
-|---|---:|---|
-| Train | 27.225 | 90% dari folder `train`, `seed=0` |
-| Validation | 3.025 | 10% dari folder `train`, `seed=0` |
-| Test | 6.300 | Folder `test` terpisah, `shuffle=False` |
-| Tidak terpakai | 6.300 | Folder `valid` bawaan dataset |
+Satu catatan kejujuran metodologis: kesamaan ukuran byte dan jumlah langkah optimizer adalah bukti yang sangat kuat, tetapi bukan bukti kriptografis, karena sidik jari berkas di Colab tidak dicatat di notebook. Bukti akan menjadi sempurna bila hash SHA-256 berkas Colab disimpan saat ekspor. Untuk keperluan dokumentasi proyek ini, rantai bukti di atas sudah memadai.
 
-Total gambar yang benar-benar dipakai: 36.550 dari 42.850 (85,3%).
+## 3. Dataset dan pembagian data
 
-Urutan indeks kelas mengikuti abjad nama folder, sehingga `nowildfire` = 0 dan `wildfire` = 1. Urutan ini sama dengan isi [`labels.json`](../backend/model/labels.json): `{"0": "nowildfire", "1": "wildfire"}`.
+Dataset: Kaggle [`abdelghaniaaba/wildfire-prediction-dataset`](https://www.kaggle.com/datasets/abdelghaniaaba/wildfire-prediction-dataset), diunduh pada cell 0 dan diekstrak ke `/content/dataset` (1,45 GB).
 
-**Batasan domain:** citra latih berasal dari Kanada, bukan Kalimantan. Model mempelajari tekstur dan warna citra satelit Kanada pada resolusi 350×350; tidak ada satu pun contoh negatif dari lanskap, kabut, atau lahan gambut Kalimantan. Kinerja pada citra lokal tidak dijamin dan belum diuji.
+| Split | Jumlah gambar | Dipakai untuk | Status |
+|---|---|---|---|
+| `train` | 30.250 | dipotong internal menjadi train + validation | dipakai |
+| `test` | 6.300 | evaluasi akhir | dipakai |
+| `valid` | 6.300 | — | **dimuat dan divisualisasikan, tidak dipakai** |
 
-## 3. Preprocessing dan augmentasi
+Pemotongan pada cell 12 memakai `ImageDataGenerator(validation_split=0.1)` dengan `seed=0`:
 
-Semua gambar diproses sebagai RGB dengan target ukuran `224 × 224` dan batch size `32`.
+- **27.225** gambar untuk training (`subset='training'`), terbagi menjadi 851 batch berukuran 32.
+- **3.025** gambar untuk validasi (`subset='validation'`).
+- **6.300** gambar untuk test, dengan `shuffle=False` agar urutan prediksi sejajar dengan `df_test.Label`.
+
+Total gambar yang benar-benar dipakai: **36.550 dari 42.850** (85,3%). Sebanyak 6.300 gambar pada folder `valid` tidak pernah dipakai, sehingga ada data berlabel yang terbuang.
+
+Isi dataset: citra satelit berukuran asli 350×350 piksel dari area yang pernah terbakar di **Kanada** (Quebec), dengan nama berkas berupa koordinat, misalnya `-73.443249,4...jpg`. Dua kelas: `wildfire` dan `nowildfire`.
+
+## 4. Pra-pemrosesan
+
+Konfigurasi pada cell 12 dan 13:
+
+| Parameter | Nilai |
+|---|---|
+| Ukuran input | 224×224 piksel |
+| Color mode | RGB (3 kanal) |
+| Normalisasi | `tf.keras.applications.mobilenet_v2.preprocess_input` → skala [-1, 1] |
+| Batch size | 32 |
+| Mode label | `categorical` (one-hot, 2 kelas) |
+| Loss | `categorical_crossentropy` |
+| Optimizer | Adam, learning rate default 0,001 (terbaca di artefak) |
+
+### 4.1 Augmentasi tidak pernah berjalan
+
+Parameter `rotation_range=30`, `zoom_range=0.15`, `width_shift_range=0.2`, `height_shift_range=0.2`, `shear_range=0.15`, `horizontal_flip=True`, dan `fill_mode="nearest"` ditulis di dalam pemanggilan **`flow_from_dataframe(...)`**.
+
+Fungsi tersebut tidak memiliki parameter itu; argumen yang tidak dikenali hanya masuk ke `**kwargs` dan diabaikan tanpa peringatan. Akibatnya **model dilatih hanya dengan resize dan normalisasi**, tanpa augmentasi sama sekali.
+
+Perbaikan yang benar:
 
 ```python
 train_generator = tf.keras.preprocessing.image.ImageDataGenerator(
     preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input,
     validation_split=0.1,
-)
-test_generator = tf.keras.preprocessing.image.ImageDataGenerator(
-    preprocessing_function=tf.keras.applications.mobilenet_v2.preprocess_input,
+    rotation_range=30,
+    zoom_range=0.15,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    shear_range=0.15,
+    horizontal_flip=True,
+    fill_mode="nearest",
 )
 ```
 
-Fungsi `mobilenet_v2.preprocess_input` mengubah nilai piksel `[0, 255]` menjadi rentang `[-1, 1]`. Fungsi ini dipakai baik saat training maupun saat inferensi.
+### 4.2 Pra-pemrosesan berada di luar model
 
-### Augmentasi tidak pernah berjalan
+Model `.h5` **tidak memiliki layer `Rescaling`** di dalamnya. Layer pertama adalah `Conv2D` milik MobileNetV2, yang menerima tensor ternormalisasi. Konsekuensinya, siapa pun yang memakai model ini **wajib** memanggil `preprocess_input` yang sama sebelum prediksi. `backend/python/infer.py` sudah melakukannya; kalau langkah itu dilepas, akurasi akan turun drastis tanpa pesan error.
 
-Notebook **menuliskan** parameter augmentasi pada pemanggilan `flow_from_dataframe`:
+### 4.3 Catatan kecil
+
+Generator validasi dibuat dengan `shuffle=True`. Ini tidak mengubah nilai `val_accuracy` agregat karena metrik dihitung atas seluruh batch, tetapi sebaiknya diubah menjadi `False` agar urutan prediksi validasi dapat diaudit.
+
+## 5. Seleksi arsitektur: tiga kandidat
+
+Cell 13 mendefinisikan satu resep transfer learning yang dipakai untuk semua kandidat:
 
 ```python
-rotation_range=30, zoom_range=0.15,
-width_shift_range=0.2, height_shift_range=0.2,
-shear_range=0.15, horizontal_flip=True, fill_mode="nearest"
+pretrained_model = model(input_shape=(224, 224, 3), include_top=False,
+                         weights='imagenet', pooling='avg')
+pretrained_model.trainable = False
+
+x = tf.keras.layers.Dense(128, activation='relu')(pretrained_model.output)
+x = tf.keras.layers.Dense(128, activation='relu')(x)
+outputs = tf.keras.layers.Dense(2, activation='softmax')(x)
 ```
 
-Namun `ImageDataGenerator.flow_from_dataframe` tidak memiliki parameter tersebut. Argumen itu masuk ke `**kwargs` dan diabaikan; fungsi hanya membaca `has_ext`, `sort`, dan `drop_duplicates` dari argumen tambahan. Akibatnya:
+Backbone **dibekukan seluruhnya** (`trainable = False`); yang dilatih hanya tiga layer Dense di atasnya.
 
-- Tidak ada rotasi, zoom, shift, shear, atau flip yang diterapkan.
-- Training hanya memakai resize ke 224×224, konversi RGB, dan `preprocess_input`.
-- Angka akurasi di dokumen ini adalah hasil training **tanpa augmentasi**.
+Cell 14 melatih tiga arsitektur selama **satu epoch** dengan `validation_data=val_images`:
 
-Jangan mengklaim augmentasi sebagai bagian dari metode. Jika augmentasi ingin dipakai, parameter harus dipindahkan ke konstruktor `ImageDataGenerator(...)` atau memakai layer augmentasi di dalam model, lalu model dilatih ulang.
+| Peringkat | Model | `val_accuracy` (1 epoch) | Waktu training |
+|---|---|---|---|
+| 1 | **MobileNetV2** | **0,9557** | 115,66 detik |
+| 2 | DenseNet121 | 0,9534 | 150,70 detik |
+| 3 | EfficientNetB0 | 0,8555 | 125,07 detik |
 
-### Preprocessing saat prototype berjalan
+![Perbandingan val_accuracy tiga model](assets/02-perbandingan-3-model.png)
 
-Artefak `.h5` **tidak memiliki layer preprocessing di dalam graph** (158 layer, layer pertama langsung `Conv1`; tidak ada `Rescaling` atau `Normalization`). Karena itu `preprocess_input` wajib dilakukan di luar model. Implementasinya ada di [`backend/python/infer.py`](../backend/python/infer.py):
+Kolom terakhir pada tabel `df_results` di notebook: MobileNetV2 0,9557 (115,66 s), DenseNet121 0,9534 (150,70 s), EfficientNetB0 0,8555 (125,07 s).
 
-1. Baca file upload dan catat ukuran asli.
-2. `resize((224, 224))`, lalu `convert("RGB")`.
-3. `np.array(..., dtype=np.float32)` dan `mobilenet_v2.preprocess_input`.
-4. Tambah dimensi batch menjadi `[1, 224, 224, 3]`.
+### 5.1 Dua catatan yang harus disebut saat presentasi
 
-Urutan ini sudah sesuai dengan training. Satu perbedaan kecil: generator Keras melakukan resize dengan interpolasi default `nearest`, sedangkan `PIL.Image.resize` memakai interpolasi default BICUBIC. Perbedaannya kecil, tetapi tetap merupakan sumber pergeseran distribusi yang perlu disebut sebagai keterbatasan.
+1. **Selisih MobileNetV2 dan DenseNet121 sangat tipis**, yaitu 0,0023 atau sekitar 7 gambar dari 3.025 gambar validasi. Ini belum cukup untuk menyimpulkan MobileNetV2 lebih unggul secara meyakinkan; keunggulannya yang sebenarnya adalah **kecepatan** dan ukuran model yang jauh lebih kecil.
+2. **Perbandingan ini bias ke MobileNetV2.** Semua kandidat memakai `mobilenet_v2.preprocess_input`, padahal setiap arsitektur punya skema normalisasi ImageNet-nya sendiri. EfficientNetB0 punya layer normalisasi internal dan mengharapkan skala 0–255, sehingga menerima input [-1, 1] membuat performanya jatuh ke 0,8555. Angka itu mencampur kualitas arsitektur dengan ketidakcocokan pra-pemrosesan, jadi tidak boleh dibaca sebagai "EfficientNetB0 buruk".
 
-## 4. Arsitektur model
+Judul grafik batang di cell 16 berbunyi *"Accuracy on the test set (after 1 epoch)"*, padahal sumbu Y-nya adalah `val_accuracy` dari 3.025 gambar validasi, bukan test set. Tidak ada test set yang dievaluasi pada tahap ini.
 
-Arsitektur yang benar-benar tersimpan di `wildfire_model.h5` adalah `Functional` dengan 158 layer:
+## 6. Training model final
 
-```mermaid
-graph TD
-    Input(["Input: 224 × 224 × 3 (RGB, float32)"]) --> Pre["preprocess_input (di luar model, dilakukan infer.py)"]
-    Pre --> Backbone["MobileNetV2 ImageNet, include_top=False, pooling='avg' — seluruh layer trainable=False"]
-    Backbone --> Pool["GlobalAveragePooling2D (1280 fitur)"]
-    Pool --> Dense1["Dense 128 + ReLU"]
-    Dense1 --> Dense2["Dense 128 + ReLU"]
-    Dense2 --> Output["Dense 2 + Softmax"]
-```
+Cell 18 membangun ulang MobileNetV2 dari nol, lalu melatihnya dengan batas lima epoch, `EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)`, dan tanpa `ModelCheckpoint`. Pelatihan berhenti sendiri di epoch keempat karena `val_loss` naik:
 
-| Bagian | Detail | Jumlah parameter |
-|---|---|---:|
-| Backbone | MobileNetV2 (alpha 1.0), bobot ImageNet, dibekukan | 2.257.984 |
-| Head | `Dense(128, relu)` → `Dense(128, relu)` → `Dense(2, softmax)` | 180.738 |
-| **Total** |  | **2.438.722** |
+| Epoch | Train accuracy | Train loss | Val accuracy | Val loss |
+|---|---|---|---|---|
+| 1 | 0,9474 | 0,1397 | 0,9540 | 0,1288 |
+| 2 | 0,9626 | 0,1002 | 0,9574 | 0,1120 |
+| 3 | 0,9698 | 0,0799 | **0,9593** | **0,1071** ← terbaik |
+| 4 | 0,9744 | 0,0667 | 0,9547 | 0,1212 |
 
-Konfigurasi compile yang tersimpan di artefak:
+![Kurva accuracy dan loss](assets/04-kurva-accuracy-loss.png)
 
-- **Optimizer:** Adam, learning rate `0.001` (default Keras).
-- **Loss:** `categorical_crossentropy`.
-- **Metrik:** `accuracy`.
-- **Format simpan:** Keras 3.13.2, file HDF5 berisi konfigurasi, bobot, dan state optimizer.
+Yang perlu dipahami dari tabel ini:
 
-Nama layer backbone (`Conv1`, `bn_Conv1`, `block_1_expand` … `block_16_project`, `Conv_1` 1280 filter, `out_relu`) adalah nama khas MobileNetV2, bukan MobileNetV1. Seluruh layer backbone memiliki `trainable=False`; hanya tiga layer `Dense` yang dilatih.
+- **Epoch terbaik adalah epoch 3** menurut `val_loss`. Karena `restore_best_weights=True`, bobot yang dipakai setelah `fit()` selesai adalah bobot **epoch 3**, bukan epoch 4.
+- Train accuracy terus naik sampai 0,9744 sementara val accuracy turun di epoch 4. Ini gejala **overfitting ringan** pada akhir pelatihan, dan itulah alasan EarlyStopping menghentikan proses.
+- Empat epoch yang berjalan cocok dengan `optimizer/iteration = 3404` pada artefak (851 × 4). Jadi artefak disimpan setelah empat epoch berjalan, dengan bobot yang sudah dipulihkan ke epoch 3.
 
-## 5. Alur training
+## 7. Evaluasi pada test set
 
-```mermaid
-flowchart TD
-    A["Muat daftar file dan label menjadi DataFrame (Filepath, Label)"] --> B["Generator train 27.225 + validation 3.025 (seed 0)"]
-    A --> C["Generator test 6.300 (shuffle=False)"]
-    B --> D["Bangun model: backbone ImageNet dibekukan + Dense(128) + Dense(128) + Dense(2, softmax)"]
-    D --> E["Latih setiap kandidat 1 epoch, catat val_accuracy dan waktu"]
-    E --> F["Pilih val_accuracy tertinggi (output tersimpan: MobileNet V1, 0,9640)"]
-    F --> G["Bangun ulang model, latih maksimal 5 epoch dengan EarlyStopping(val_loss, patience=1, restore_best_weights=True)"]
-    G --> H["Prediksi 6.300 gambar test, hitung accuracy dan confusion matrix ternormalisasi"]
-    H --> I["Ekspor model ke wildfire_model.h5 dan labels.json"]
-```
-
-Tidak ada tahap augmentasi pada diagram karena augmentasi memang tidak pernah aktif (lihat bagian 3).
-
-## 6. Hasil perbandingan backbone
-
-Notebook membandingkan **27 kandidat**, masing-masing dilatih **1 epoch** dengan split yang sama. Angka di bawah adalah output `df_results` yang tersimpan:
-
-| Peringkat | Model | Validation accuracy | Waktu latih (detik) |
-|---:|---|---:|---:|
-| 1 | **MobileNet (V1)** | **0,9640** | 114,04 |
-| 2 | DenseNet201 | 0,9636 | 152,46 |
-| 3 | DenseNet169 | 0,9600 | 135,58 |
-| 4 | DenseNet121 | 0,9590 | 276,70 |
-| 5 | ResNet152V2 | 0,9577 | 152,78 |
-| 6 | VGG16 | 0,9564 | 135,51 |
-| 7 | ResNet50V2 | 0,9560 | 128,96 |
-| 8 | ResNet101V2 | 0,9547 | 138,34 |
-| 9 | **MobileNetV2** | **0,9544** | 118,69 |
-| 10 | NASNetMobile | 0,9481 | 140,44 |
-| 11 | VGG19 | 0,9464 | 128,02 |
-| 12 | Xception | 0,9445 | 130,58 |
-| 13 | InceptionResNetV2 | 0,9431 | 154,13 |
-| 14 | InceptionV3 | 0,9398 | 131,33 |
-| 15 | ResNet152 | 0,8863 | 158,81 |
-| 16 | MobileNetV3Small | 0,8836 | 144,66 |
-| 17 | ResNet50 | 0,8823 | 126,46 |
-| 18 | ResNet101 | 0,8770 | 138,21 |
-| 19 | MobileNetV3Large | 0,8648 | 117,44 |
-| 20 | EfficientNetB7* | 0,8506 | 141,01 |
-| 21 | EfficientNetB2 | 0,8469 | 130,78 |
-| 22 | EfficientNetB6* | 0,8215 | 143,18 |
-| 23 | EfficientNetB5* | 0,8155 | 140,26 |
-| 24 | EfficientNetB3 | 0,8109 | 136,94 |
-| 25 | EfficientNetB4 | 0,8010 | 148,21 |
-| 26 | EfficientNetB0 | 0,6443 | 124,30 |
-| 27 | EfficientNetB1 | 0,5736 | 130,72 |
-
-Catatan kejujuran data:
-
-- `MobileNet` adalah MobileNet **V1**, bukan MobileNetV2. Model inilah yang dipilih oleh baris `best_model = df_results.iloc[0]` pada output yang tersimpan.
-- MobileNetV2 berada di peringkat 9 dengan selisih 0,0096 (kurang dari 1 poin persentase) dari peringkat pertama. Selisih sekecil itu pada satu epoch tidak cukup untuk menyimpulkan satu arsitektur lebih baik.
-- Baris bertanda `*` (EfficientNetB5, B6, B7) tidak valid: dictionary pada notebook memetakan ketiganya ke konstruktor `EfficientNetB4`, sehingga yang dilatih ulang adalah B4.
-- Kunci `MobileNetV2` ditulis dua kali di dictionary, sehingga entri pertama tertimpa. Jumlah kandidat unik 27, bukan 28.
-- Judul grafik pada notebook berbunyi `Accuracy on the test set (after 1 epoch)`, padahal sumbu Y memakai `val_accuracy`. Label grafik itu keliru dan tidak boleh dikutip sebagai akurasi test.
-- Perbandingan satu epoch hanya indikasi awal, bukan benchmark arsitektur yang adil, karena belum convergence dan belum diulang dengan beberapa seed.
-
-## 7. Hasil training final
-
-Setelah memilih model terbaik dari tabel di atas, notebook membangun ulang model dan melatihnya maksimal 5 epoch dengan `EarlyStopping(monitor='val_loss', patience=1, restore_best_weights=True)`.
-
-Output yang tersimpan (model terpilih: **MobileNet V1**):
-
-| Epoch | Train loss | Train accuracy | Validation loss | Validation accuracy | Catatan |
-|---:|---:|---:|---:|---:|---|
-| 1 | 0,1270 | 0,9531 | 0,0998 | 0,9617 | |
-| 2 | 0,0903 | 0,9678 | 0,0842 | 0,9686 | |
-| 3 | 0,0732 | 0,9716 | **0,0809** | **0,9696** | `val_loss` terbaik, bobot dipulihkan |
-| 4 | 0,0604 | 0,9779 | 0,0943 | 0,9646 | `val_loss` memburuk, `EarlyStopping` menghentikan training |
-
-### Artefak yang dipakai aplikasi
-
-`backend/model/wildfire_model.h5` bukan model dari baris tabel di atas. Artefak itu adalah **MobileNetV2** dengan 2.438.722 parameter, dan state optimizer-nya menunjukkan `iteration = 3404`. Karena satu epoch berisi 851 batch (27.225 ÷ 32), angka itu konsisten dengan **4 epoch** training pada split yang sama. Metrik validation per epoch untuk artefak ini tidak tersimpan di notebook, sehingga tidak ada angka validation accuracy MobileNetV2 yang dapat dikutip untuk model deployment.
-
-Kesimpulan yang aman: arsitektur deployment adalah MobileNetV2 hasil transfer learning yang konsisten dengan 4 epoch, tetapi kurva dan metrik validasinya belum tercatat.
-
-## 8. Hasil evaluasi test
-
-Output notebook yang tersimpan menghitung akurasi pada 6.300 gambar test memakai `accuracy_score`, lalu menampilkan:
-
-```text
-Best Model: MobileNet with 97.86% accuracy on the test set
-```
-
-Selain akurasi, notebook menampilkan **confusion matrix ternormalisasi** (gambar, bukan angka). `classification_report` sudah diimpor tetapi **tidak pernah dipanggil**, sehingga precision, recall, dan F1 per kelas tidak tersedia di output.
-
-Yang perlu ditegaskan:
-
-- Angka **97,86%** adalah test accuracy untuk **MobileNet V1**, bukan untuk MobileNetV2 yang dipakai aplikasi.
-- Test accuracy artefak MobileNetV2 **belum diukur** dan tidak ada di repository. Angka 97,00% yang pernah ditulis di dokumen versi sebelumnya tidak didukung oleh sumber mana pun dan sudah dihapus.
-- Angka ini berasal dari test split dataset Kanada yang distribusinya mirip dengan data latih. Angka tersebut bukan estimasi performa pada citra Kalimantan, kamera ponsel, atau kondisi berasap.
-- Karena `classification_report` tidak dijalankan, klaim tentang keseimbangan precision/recall antar kelas juga belum punya dasar.
-
-Untuk mendapatkan angka yang benar untuk model deployment, jalankan evaluasi pada folder `test` dengan preprocessing yang sama:
+Cell 20 memprediksi seluruh 6.300 gambar test (197 batch) memakai objek `model` yang bobotnya sudah dipulihkan ke epoch 3:
 
 ```python
-import tensorflow as tf
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-
-model = tf.keras.models.load_model("backend/model/wildfire_model.h5")
-test = tf.keras.utils.image_dataset_from_directory(
-    "path/ke/wildfire-prediction-dataset/test",
-    image_size=(224, 224), batch_size=32, shuffle=False,
-)
-test = test.map(lambda x, y: (tf.keras.applications.mobilenet_v2.preprocess_input(x), y))
-
-y_true = [int(l) for _, batch in test for l in batch]
-probs = model.predict(test, verbose=0)
-y_pred = probs.argmax(axis=1)
-
-print("accuracy:", accuracy_score(y_true, y_pred))
-print(classification_report(y_true, y_pred, target_names=["nowildfire", "wildfire"]))
-print(confusion_matrix(y_true, y_pred, normalize="true"))
+pred = model.predict(test_images)
+acc = accuracy_score(list(df_test.Label), pred_labels)
+printmd(f'## Best Model: {best_model[0]} with {acc*100:.2f}% accuracy on the test set')
 ```
 
-`image_dataset_from_directory` mengurutkan nama folder secara abjad, sehingga indeks 0 = `nowildfire` dan 1 = `wildfire`, konsisten dengan `labels.json`.
+Output yang tersimpan:
 
-## 9. Artefak model
+> `## Best Model: MobileNetV2 with 97.00% accuracy on the test set`
 
-```text
-backend/model/
-├── wildfire_model.h5   # model Keras lengkap: konfigurasi + bobot + state optimizer (11.745.904 byte)
-└── labels.json         # pemetaan kelas {"0": "nowildfire", "1": "wildfire"}
-```
+Angka **97,00%** berarti **6.111 benar dan 189 salah** dari 6.300 gambar. Karena evaluasi memakai bobot epoch 3 yang sama dengan yang disimpan di cell 22, angka ini **sah dikutip untuk model yang dipakai aplikasi**.
 
-Detail artefak:
+Cell yang sama juga menampilkan **confusion matrix ternormalisasi**:
 
-| Properti | Nilai |
+![Confusion matrix ternormalisasi](assets/05-confusion-matrix.png)
+
+Yang **tidak** ada di notebook:
+
+| Metrik | Status |
 |---|---|
-| Format | HDF5, Keras 3.13.2, backend TensorFlow |
-| Isi | Model `Functional` utuh (`model_config` + `model_weights` + `optimizer_weights`), bukan file bobot saja |
-| Input | `(None, 224, 224, 3)`, float32 |
-| Output | `(None, 2)`, softmax |
+| Accuracy test | ✅ 97,00% (MobileNetV2) |
+| Confusion matrix | ✅ ada, tetapi hanya sebagai gambar; angkanya tidak dicetak sebagai teks |
+| Precision, recall, F1 per kelas | ❌ `classification_report` diimpor di cell 2 tetapi **tidak pernah dipanggil** |
+| Kurva ROC / AUC | ❌ tidak ada |
+| Kalibrasi skor softmax | ❌ tidak ada |
+| Evaluasi folder `valid` | ❌ tidak pernah dihitung |
+
+Tanpa precision dan recall per kelas, belum bisa dijawab pertanyaan "lebih berbahaya mana, kebakaran yang lolos atau gambar bersih yang dituduh terbakar?". Confusion matrix pada gambar menunjukkan kedua jenis kesalahan ada, tetapi angka pastinya baru bisa dikutip setelah sel evaluasi dijalankan ulang (§11).
+
+Cell 21 menampilkan 24 contoh prediksi beserta label aslinya, tetapi Colab menyimpannya sebagai *"Output hidden; open in colab.research.google.com to view"*, sehingga galat kualitatif tidak dapat diperiksa dari berkas notebook.
+
+## 8. Artefak deployment
+
+Hasil pembacaan `backend/model/wildfire_model.h5`:
+
+| Atribut | Nilai |
+|---|---|
+| Format | HDF5 (`.h5`), format legacy Keras 3 |
+| Keras | 3.13.2, backend TensorFlow |
+| Tipe model | Functional |
 | Jumlah layer | 158 |
-| Jumlah parameter | 2.438.722 |
-| Label di API | `model`: `wildfire_rgb_cnn` |
+| Total parameter | 2.438.722 |
+| Backbone | MobileNetV2, **seluruhnya frozen**, 2.257.984 parameter |
+| Head terlatih | 180.738 parameter (`Dense` 1.280→128 = 163.968, `Dense` 128→128 = 16.512, `Dense` 128→2 = 258) |
+| Head | `GlobalAveragePooling` → `Dense(128, relu)` → `Dense(128, relu)` → `Dense(2, softmax)` |
+| Isi berkas | bobot **dan** state optimizer (`optimizer_weights/adam`, `iteration = 3404`, `learning_rate = 0,001`) |
+| Input | `float32` 224×224×3, rentang [-1, 1] |
+| Output | 2 nilai softmax, indeks 0 = `nowildfire`, 1 = `wildfire` |
 
-Karena file berisi model lengkap, `tf.keras.models.load_model()` dapat memuatnya tanpa mendefinisikan ulang arsitektur. Model dimuat ulang pada setiap permintaan `/api/predict`, sehingga latensi total sekitar 1,1 detik (muat model ±0,6 detik + inferensi ±0,5 detik).
+Angka backbone itu bukti tambahan arsitektur: MobileNetV2 tanpa top layer berukuran tepat 2.257.984 parameter, sedangkan MobileNet V1 berukuran sekitar 3,2 juta. Karena `trainable = False`, seluruh parameter backbone bersifat tetap dan hanya 180.738 parameter head yang berubah saat training. Ini menjelaskan mengapa berkas hanya 11,7 MB dan mengapa inferensi di CPU masih di bawah satu detik.
 
-## 10. Hubungan dengan aplikasi (alur runtime)
+Model disimpan dengan `model.save()` yang memunculkan peringatan Keras: *"This file format is considered legacy. We recommend using instead the native Keras format"*. Format `.h5` tetap berfungsi, tetapi `.keras` lebih tepat untuk pekerjaan berikutnya.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Pengguna
-    participant FE as Frontend React
-    participant BE as Express Server
-    participant PY as Python Script
-    participant MD as Wildfire Model
+## 9. Keterbatasan dan temuan audit
 
-    User->>FE: Unggah gambar JPG/PNG (maks 5 MB)
-    FE->>BE: HTTP POST /api/predict (multipart)
-    BE->>PY: spawn proses child_process (infer.py)
-    activate PY
-    PY->>PY: Baca gambar, resize 224x224, konversi RGB
-    PY->>PY: mobilenet_v2.preprocess_input + tambah dimensi batch
-    PY->>MD: load_model + predict
-    MD-->>PY: Array probabilitas 2 kelas
-    PY-->>BE: Baris RESULT berisi JSON
-    deactivate PY
-    BE-->>FE: Respons confidence dan metadata
-    FE-->>User: Tampilkan hasil di panel verifikasi citra
+Diurutkan dari yang paling perlu ditindaklanjuti:
+
+1. **Token API Kaggle tertulis terbuka di cell 0** (`os.environ["KAGGLE_API_TOKEN"] = "KGAT_..."`). Siapa pun yang membuka notebook dapat membacanya. Token harus **dicabut dan dibuat ulang**, lalu disimpan di Colab Secrets, bukan di dalam cell.
+2. **Augmentasi tidak aktif** (§4.1), sehingga model lebih rentan terhadap variasi rotasi, skala, dan pencahayaan.
+3. **Seleksi arsitektur hanya 1 epoch dan pra-pemrosesan tidak disesuaikan per model** (§5), sehingga perbandingan belum sepenuhnya adil.
+4. **Precision, recall, dan F1 belum tersedia** (§7). Untuk aplikasi yang menampilkan "terlihat seperti area terbakar", biaya false positive dan false negative perlu diketahui.
+5. **Konversi ONNX gagal.** Cell 27 memasang `tf2onnx` lalu konversi berhenti dengan `VersionError: Detected incompatible Protobuf Gencode/Runtime versions ... gencode 6.31.1 runtime 5.29.6`. Tidak ada berkas `.onnx` di repositori, dan backend saat ini memakai Python + TensorFlow, bukan ONNX.
+6. **Domain data adalah Kanada, bukan Kalimantan** (Quebec, 350×350 px). Tidak ada contoh negatif dari lahan gambut, kabut asap, atau tutupan awan tropis. Model hanya sah sebagai demonstrasi metode.
+7. **Folder `valid` (6.300 gambar) tidak dipakai**, padahal bisa menjadi validasi eksternal yang lebih jujur daripada potongan 10% dari train.
+8. **Skor softmax belum dikalibrasi**, jadi angka "98%" bukan probabilitas kebakaran.
+
+## 10. Notebook pembanding: 27 backbone
+
+Ada notebook lain di mesin pengembang, `wildfire-prediction-dataset-satellite-images (1).ipynb`, yang membandingkan **27 backbone** pada dataset yang sama. Notebook itu **bukan** sumber artefak yang dipakai aplikasi, tetapi berguna sebagai eksplorasi awal.
+
+Cuplikan hasilnya:
+
+| Posisi | Model | `val_accuracy` (1 epoch) |
+|---|---|---|
+| 1 | MobileNet (V1) | 0,9640 |
+| 2 | DenseNet201 | 0,9636 |
+| 3 | DenseNet169 | 0,9600 |
+| 8 | MobileNetV2 | 0,9544 |
+| 19 | EfficientNetB7 | 0,8506 |
+
+Catatan pada notebook pembanding:
+
+- Notebook ini melaporkan test accuracy **97,86%**, tetapi untuk **MobileNet V1**, bukan untuk MobileNetV2. Angka itu tidak boleh dipakai untuk model aplikasi.
+- Terdapat nama model duplikat di dictionary sehingga jumlah kandidat unik kurang dari 27.
+- `EfficientNetB5`, `B6`, dan `B7` memakai bobot `EfficientNetB4` karena tidak tersedia di Keras Applications, sehingga barisnya tidak mewakili arsitektur yang tertulis.
+- Semua kandidat juga memakai `mobilenet_v2.preprocess_input`, sehingga masalah bias pra-pemrosesan pada §5.1 berlaku sama.
+
+Karena itu, dokumen ini memakai notebook Colab 3 kandidat sebagai acuan: notebook itulah yang menghasilkan berkas yang benar-benar dipakai aplikasi.
+
+## 11. Cara mereproduksi dan mengukur ulang
+
+Untuk mengukur accuracy, precision, recall, F1, dan confusion matrix dengan angka yang bisa dikutip, jalankan setelah cell 20 pada notebook (butuh dataset 1,45 GB):
+
+```python
+from sklearn.metrics import classification_report, confusion_matrix
+
+y_true = list(df_test.Label)
+y_pred = pred  # hasil mapping dari cell 20
+
+print(classification_report(y_true, y_pred, digits=4))
+print(confusion_matrix(y_true, y_pred, labels=sorted(set(y_true))))
 ```
 
-CNN hanya dipakai untuk verifikasi citra yang diunggah pengguna. Titik pada peta tetap berasal dari NASA FIRMS dan tidak dihasilkan oleh model ini.
+Perintah yang sama dapat dijalankan pada lingkungan lokal:
 
-## 11. Koreksi terhadap dokumentasi sebelumnya
+```powershell
+cd backend
+python -c "import tensorflow as tf; m = tf.keras.models.load_model('model/wildfire_model.h5'); m.summary()"
+```
 
-| Klaim di versi lama | Temuan dari notebook dan artefak | Status |
+Untuk melatih ulang dari nol, urutan notebook yang benar adalah: unduh dataset (cell 0) → buat DataFrame (cell 3) → perbaiki augmentasi ke konstruktor generator (§4.1) → latih kandidat dengan jumlah epoch yang setara dan pra-pemrosesan sesuai masing-masing arsitektur → pilih model → evaluasi pada `test` **dan** `valid` → simpan dengan `model.save('wildfire_model.keras')`.
+
+## 12. Riwayat koreksi dokumen
+
+Tabel ini disimpan agar pembaca yang menemukan versi lama dokumen memahami mengapa angkanya berubah.
+
+| Klaim pada versi lama | Fakta setelah notebook Colab diverifikasi | Status |
 |---|---|---|
-| Augmentasi rotasi, zoom, shift, shear, flip aktif saat training | Parameter ditulis di `flow_from_dataframe` dan diabaikan; augmentasi tidak pernah berjalan | Diperbaiki |
-| Perbandingan hanya MobileNetV2, DenseNet121, EfficientNetB0 | Notebook membandingkan 27 kandidat | Diperbaiki |
-| MobileNetV2 unggul dengan val_accuracy 0,9557 | MobileNetV2 0,9544 (peringkat 9); peringkat 1 MobileNet V1 0,9640 | Diperbaiki |
-| DenseNet121 0,9534 dan EfficientNetB0 0,8555 | Nilai sebenarnya 0,9590 dan 0,6443 | Diperbaiki |
-| Riwayat training final 0,9474 → 0,9779 | Nilai sebenarnya 0,9531 → 0,9779, dan itu untuk MobileNet V1 | Diperbaiki |
-| Test accuracy 97,00% untuk MobileNetV2 | Output notebook: 97,86% untuk MobileNet V1; metrik MobileNetV2 tidak tercatat | Diperbaiki |
-| `wildfire_model.h5` adalah "file bobot" | File berisi model lengkap + state optimizer | Diperbaiki |
-| Notebook sumber berupa tautan Google Drive | Notebook ada di `E:\Coding\wildfire-kaggle\...ipynb` dengan output run 2023 | Diperbaiki |
-| Dataset bersifat "global dan umum" | Dataset adalah citra satelit Kanada (Quebec), 350×350 piksel | Diperbaiki |
+| "27 backbone dibandingkan, MobileNet V1 menang 0,9640, MobileNetV2 peringkat 9" | Angka itu benar, tetapi berasal dari **notebook pembanding**. Notebook yang menghasilkan artefak memakai **3 kandidat** dan **MobileNetV2 menang 0,9557** | Diperbaiki |
+| "Test accuracy artefak belum pernah diukur; 97,00% tidak didukung data" | **Salah.** Cell 20 mencetak `MobileNetV2 with 97.00% accuracy on the test set`, dan evaluasi itu memakai bobot yang sama dengan yang disimpan | Diperbaiki, angka dipulihkan |
+| "Final training history 0,9531 → 0,9678 → 0,9716 → 0,9779 (MobileNet V1)" | Riwayat notebook artefak: 0,9474 → 0,9626 → 0,9698 → 0,9744 dengan val 0,9540 → 0,9574 → 0,9593 → 0,9547 | Diperbaiki |
+| "DenseNet121 0,9590, EfficientNetB0 0,6443" | Nilai untuk notebook artefak: DenseNet121 **0,9534**, EfficientNetB0 **0,8555** | Diperbaiki |
+| "`97,86%` adalah akurasi model aplikasi" | 97,86% milik MobileNet V1 di notebook pembanding; angka untuk aplikasi adalah **97,00%** | Diperbaiki |
+| "Augmentasi digunakan untuk mengurangi overfitting" | Augmentasi **tidak pernah berjalan** karena parameternya berada di `flow_from_dataframe` | Tetap berlaku |
+| "`classification_report` dijalankan" | Diimpor tetapi **tidak pernah dipanggil**; precision/recall/F1 tidak ada | Tetap berlaku |
 
-## 12. Batasan dan klaim yang aman
+## 13. Rujukan
 
-1. Model hanya dua kelas dan hanya memakai citra RGB; tidak ada sensor termal, koordinat, atau informasi waktu.
-2. Data latih berasal dari Kanada, bukan Kalimantan. Tidak ada validasi pada citra lokal.
-3. Augmentasi tidak aktif, sehingga model lebih rentan terhadap variasi rotasi, skala, dan pencahayaan.
-4. Backbone dibekukan; hanya head yang dilatih. Ini membatasi kapasitas adaptasi ke domain baru.
-5. Perbandingan arsitektur hanya 1 epoch dan satu seed, sehingga belum cukup untuk klaim keunggulan arsitektur.
-6. Metrik test artefak deployment (MobileNetV2) belum diukur; precision, recall, F1, dan kalibrasi juga belum.
-7. Skor softmax belum dikalibrasi. Sebut sebagai "skor kemiripan", bukan probabilitas kejadian kebakaran.
-8. Model dimuat ulang tiap permintaan sehingga latensi dan memori belum optimal.
-9. Interpolasi resize saat training (`nearest`) dan inferensi (BICUBIC) berbeda; perbedaan kecil tetapi nyata.
-
-Kalimat yang aman untuk presentasi:
-
-> "Model yang dipakai adalah MobileNetV2 hasil transfer learning pada dataset citra satelit Kanada. Pada eksperimen pembanding yang tersimpan, MobileNetV2 mencapai validation accuracy 0,9544 setelah satu epoch. Metrik test untuk artefak yang diekspor belum kami ukur, jadi kami tidak mengklaim angka akurasi test untuk model produksi. Model ini hanya alat bantu screening, bukan pendeteksi kebakaran."
+- Notebook pelatihan: [Colab `1NX43x-kH59Qu_nabDKVnKekNh4h-w9Se`](https://colab.research.google.com/drive/1NX43x-kH59Qu_nabDKVnKekNh4h-w9Se?usp=sharing)
+- Dataset: [Wildfire Prediction Dataset, Kaggle](https://www.kaggle.com/datasets/abdelghaniaaba/wildfire-prediction-dataset)
+- MobileNetV2: Sandler et al., *MobileNetV2: Inverted Residuals and Linear Bottlenecks*, CVPR 2018
+- Keras Applications: [dokumentasi MobileNetV2](https://keras.io/api/applications/mobilenet/)
+- Dokumen terkait: [PRD.md](PRD.md) · [PRESENTASI.md](PRESENTASI.md) · [NASKAH_PRESENTASI.md](NASKAH_PRESENTASI.md)
