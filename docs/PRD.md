@@ -31,8 +31,8 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 
 | ID | Tujuan |
 |---|---|
-| G1 | Menampilkan hotspot FIRMS untuk jendela 24 jam dan 48 jam terakhir di seluruh Kalimantan |
-| G2 | Memberi konteks cuaca dan arah angin di sekitar titik panas (kualitas udara per kota direncanakan, lihat F5) |
+| G1 | Menampilkan hotspot FIRMS untuk jendela 24, 48, dan 72 jam terakhir di seluruh Kalimantan |
+| G2 | Memberi konteks cuaca dan arah angin di sekitar titik panas, serta kualitas udara per kota (F5) |
 | G3 | Menyediakan verifikasi citra berbasis CNN dengan proses yang transparan |
 | G4 | Memenuhi enam syarat dokumen UTS (lihat bagian 13) |
 
@@ -47,7 +47,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 
 | Pengguna | Skenario |
 |---|---|
-| Dosen penguji | Membuka demo, melihat peta, mengganti periode 24/48 jam, mengunggah citra ke verifikasi, membaca log proses |
+| Dosen penguji | Membuka demo, melihat peta, mengganti periode 24/48/72 jam, mengunggah citra ke verifikasi, membaca log proses |
 | Mahasiswa atau peneliti | Memahami pipeline data, model, dan batasan sistem lewat repositori dan dokumen ini |
 | Publik | Melihat sebaran titik panas dan kondisi cuaca di sekitarnya |
 
@@ -56,10 +56,10 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | ID | Fitur | Status | Catatan |
 |---|---|---|---|
 | F1 | Peta hotspot interaktif (Leaflet, tile OSM) | Selesai | Marker digambar dengan canvas (`preferCanvas`) |
-| F2 | Periode data 24 jam dan 48 jam | Selesai | Jendela waktu bergeser, bukan hari kalender UTC |
+| F2 | Periode data 24 jam, 48 jam, dan 72 jam | Selesai | Jendela waktu bergeser, bukan hari kalender UTC |
 | F3 | Animasi asap berbasis arah angin | Selesai | Ilustratif, maksimum 6000 partikel |
-| F4 | Statistik: total, keyakinan tinggi, pie keyakinan, distribusi per jam | Selesai | |
-| F5 | Cuaca dan kualitas udara (AQI) per kota | Rencana | Belum ada di repositori; rancangan: AQI AS (EPA) dari PM2.5 dan PM10 |
+| F4 | Statistik ringkas: total observasi dan rincian per satelit | Selesai | Angka mengikuti filter yang aktif |
+| F5 | Cuaca dan kualitas udara (AQI) per kota | Selesai | `CityConditions.jsx`: AQI, PM2.5, PM10, suhu, kelembapan, angin, pencarian kota |
 | F6 | Verifikasi citra CNN dengan log proses nyata | Selesai | Log di-stream dari `infer.py` |
 | F7 | Mode terang dan gelap | Selesai | |
 | F8 | Navigasi touchpad (geser 2 jari) | Selesai | Mouse wheel tetap untuk zoom |
@@ -68,6 +68,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | F11 | Riwayat dan tren hotspot | Backlog | Butuh penyimpanan (mis. Supabase) |
 | F12 | CNN pada tile citra satelit di sekitar hotspot | Backlog | Menyambungkan CNN dengan titik di peta |
 | F13 | Tampilan mobile | Backlog | README menyatakan belum didukung |
+| F14 | Grafik pie keyakinan dan distribusi observasi per jam | Backlog | `recharts` sudah ada di `package.json` tetapi belum dipakai di `src/` |
 
 ## 6. Persyaratan fungsional
 

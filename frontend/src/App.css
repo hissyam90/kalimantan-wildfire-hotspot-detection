@@ -548,7 +548,6 @@ button:focus-visible, input:focus-visible, select:focus-visible {
 .globe-stats { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.16); padding-top: 14px; }
 .globe-stats strong { font-size: 24px; }.globe-stats span, .globe-stats small { color: #afbbb0; font-size: 11px; }.globe-stats small { flex-basis: 100%; }
 .globe-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: -12px 0 16px; font-size: 11px; color: #afbbb0; }
-.time-slider { width: 100%; accent-color: var(--accent-green); }
 .export-button { width: 100%; margin-top: 16px; }
 .city-card { border: 1px solid var(--border); background: var(--panel-bg); padding: 20px; }
 .city-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
