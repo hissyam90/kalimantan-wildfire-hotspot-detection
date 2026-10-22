@@ -47,7 +47,7 @@ export default function HotspotMap({ smokeEnabled = true }) {
   const [viewMode, setViewMode] = useState('markers'); const [history, setHistory] = useState(() => Number(localStorage.getItem('wildfire-hotspot-views') || 0));
   const [remote, setRemote] = useState(null); const [failure, setFailure] = useState(null); const [windRemote, setWindRemote] = useState(null);
   const cacheKey = `hotspots:days=${days}`;
-  // Cache dibaca saat render supaya peta langsung terisi tanpa menunggu request.
+  // Baca cache saat render agar peta langsung terisi.
   const cached = useMemo(() => readCache(cacheKey), [cacheKey]);
   const windCache = useMemo(() => readCache('wind', 'local'), []);
   const payload = remote && remote.key === cacheKey ? remote.data : (cached ? cached.data : null);
@@ -69,7 +69,7 @@ export default function HotspotMap({ smokeEnabled = true }) {
           if (fromCache) return;
           const nextHistory = Number(localStorage.getItem('wildfire-hotspot-views') || 0) + 1;
           localStorage.setItem('wildfire-hotspot-views', String(nextHistory)); setHistory(nextHistory);
-          // Server sedang menyegarkan cache-nya: cek lagi sebentar lagi agar tampilan ikut terbaru.
+          // Cache server masih disegarkan; periksa ulang sebentar lagi.
           if (data.refreshPending && retries < 5) { retries += 1; timer = setTimeout(() => load(true), 20000); }
         })
         .catch(() => { if (!cancelled) setFailure(cacheKey); });
@@ -86,8 +86,7 @@ export default function HotspotMap({ smokeEnabled = true }) {
     return () => { cancelled = true; };
   }, []);
 
-  // Filter confidence dan FRP dikerjakan di klien agar mengubah filter tidak memicu
-  // unduhan ulang payload yang bisa beberapa megabita.
+  // Filter confidence dan FRP di klien agar mengganti filter tidak mengunduh payload besar.
   const filteredHotspots = useMemo(() => {
     const minFrpValue = Number.parseFloat(minFrp);
     return hotspots.filter((p) => (confidence === 'all' || p.confidence === confidence)

@@ -41,7 +41,7 @@ export function writeCache(key, data, persist) {
   try {
     store.setItem(PREFIX + key, JSON.stringify(entry));
   } catch {
-    // Kuota penuh atau mode privat: data tetap tersedia di memori.
+    // Kuota penuh atau mode privat; memori tetap jadi cadangan.
   }
   return entry;
 }
@@ -54,16 +54,14 @@ export function clearCache(key, persist) {
   try {
     store.removeItem(PREFIX + key);
   } catch {
-    // Tidak ada yang perlu dibersihkan.
+    // Penyimpanan lokal bisa menolak akses; cache memori sudah dibersihkan.
   }
 }
 
 /**
- * Ambil data dengan pola cache-first.
- * @returns {{cached: {data: any, storedAt: number} | null,
- *            fresh: Promise<{data: any, fromCache: boolean}>}}
- * `cached` dipakai untuk render seketika; `fresh` selalu dijalankan agar data
- * diperbarui, kecuali salinan cache masih lebih baru dari `maxAgeMs`.
+ * Cache-first: `cached` untuk render seketika, `fresh` untuk pembaruan.
+ * `fresh` tidak menyentuh jaringan bila cache masih lebih baru dari `maxAgeMs`.
+ * @returns {{cached: object|null, fresh: Promise<{data: any, fromCache: boolean}>}}
  */
 export function cachedGet(key, url, { persist, maxAgeMs = 0, ...config } = {}) {
   const cached = readCache(key, persist);

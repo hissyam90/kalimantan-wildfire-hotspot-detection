@@ -22,7 +22,7 @@ export default function CityConditions() {
   const [search, setSearch] = useState('');
   const [remote, setRemote] = useState(null);
   const [status, setStatus] = useState('idle');
-  // Cache dibaca saat render supaya kartu kota langsung tampil tanpa menunggu request.
+  // Baca cache saat render agar kartu kota langsung tampil.
   const cached = useMemo(() => readCache('wind', 'local'), []);
   const cities = remote || cached?.data.grid || [];
   const loading = status === 'idle' && cities.length === 0;

@@ -17,8 +17,7 @@ PRODUCTS = ["VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT"]
 FETCH_DAYS = 3
 CACHE_SECONDS = 600
 REQUEST_TIMEOUT = int(os.environ.get("HOTSPOT_FETCH_TIMEOUT") or 90)
-# `days` pada /api/hotspots dipetakan langsung ke DAY_RANGE NASA FIRMS (hari kalender UTC),
-# sehingga jumlah hari yang diambil sama dengan rentang terbesar yang bisa diminta.
+# `days` dipetakan langsung ke rentang hari kalender UTC yang dilayani NASA FIRMS.
 DAY_RANGES = (1, 2, 3)
 DAY_RANGE_HOURS = {1: 24, 2: 48, 3: 72}
 
@@ -224,7 +223,7 @@ def load_rows():
     if is_cache_fresh(snapshot, current):
         return {**snapshot, "stale": False, "refreshPending": False}
     if snapshot is None:
-        # Belum ada cache sama sekali: request pertama memang harus menunggu FIRMS.
+        # Cache kosong: request pertama memang menunggu FIRMS.
         with warm_lock:
             if read_cache() is None:
                 store_cache(fetch_from_nasa())
@@ -311,7 +310,7 @@ def list_hotspots():
         "sources": payload["sources"],
         "hotspots": hotspots,
     })
-    # Cache HTTP dimatikan supaya cache aplikasi (server + apiCache.js) tetap satu-satunya acuan.
+    # Matikan cache HTTP agar cache aplikasi (server + apiCache.js) jadi satu-satunya acuan.
     response.headers["Cache-Control"] = "no-store"
     return response
 

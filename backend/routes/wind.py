@@ -250,7 +250,7 @@ def load_grid():
     if is_cache_fresh(snapshot, current):
         return {**snapshot["payload"], "stale": False, "refreshPending": False}
     if snapshot is None:
-        # Belum ada cache sama sekali: request pertama menunggu OpenWeatherMap/WAQI.
+        # Cache kosong: request pertama menunggu OpenWeatherMap/WAQI.
         with warm_lock:
             if read_cache() is None:
                 store_cache(build_payload())
@@ -282,7 +282,7 @@ def list_wind():
         print(f"Gagal mengambil data angin: {error}")
         return jsonify({"error": "Gagal mengambil data angin"}), 500
     response = jsonify(payload)
-    # Cache HTTP dimatikan supaya cache aplikasi (server + apiCache.js) tetap satu-satunya acuan.
+    # Matikan cache HTTP agar cache aplikasi (server + apiCache.js) jadi satu-satunya acuan.
     response.headers["Cache-Control"] = "no-store"
     return response
 

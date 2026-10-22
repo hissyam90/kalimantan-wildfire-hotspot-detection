@@ -66,9 +66,7 @@ class SameHostRedirect(HTTPRedirectHandler):
         redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
         if redirected is None:
             raise AcquisitionError('authentication redirect', 'metode redirect tidak didukung', code)
-        # urllib may copy request headers across a redirect. Never send the
-        # LAADS bearer to EDL or any other origin; CookieJar carries only the
-        # domain-scoped session state established by the documented flow.
+        # urllib copies headers across redirects: never forward the LAADS bearer to EDL.
         redirected.headers.pop('Authorization', None)
         redirected.unredirected_hdrs.pop('Authorization', None)
         if target.netloc == urlparse(LAADS).netloc:
@@ -266,8 +264,7 @@ def preflight(items, token, budget):
     opener = build_opener(NoRedirect())
     sizes = []
     for item in items:
-        # Directory details is a JSON listing (verified live); a file-level
-        # details URL can redirect to EDL instead. Match the exact revision.
+        # Directory details is a JSON listing; a file-level URL can redirect to EDL.
         request = Request(api_url(item, 'details').rsplit('/', 1)[0] + '/', headers=auth_headers(token))
         with _open(request, 'metadata preflight', opener) as response:
             if response.status != 200 or 'application/json' not in response.headers.get('Content-Type', '').lower():

@@ -1,11 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 
-// Natural-colour NASA Blue Marble; the gradient underneath remains as a visual fallback if the CDN is unavailable.
 const EARTH_TEXTURE = 'https://eoimages.gsfc.nasa.gov/images/imagerecords/74000/74218/world.200412.3x5400x2700.jpg';
 
 function project(lat, lon) {
-  // The globe shows a 180° window centered at 116°E (Kalimantan), not the
-  // default Greenwich-centered half of an equirectangular world texture.
+  // Jendela globe 180° berpusat di 116°BT (Kalimantan), bukan Greenwich.
   const x = 50 + (lon - 116) * (100 / 180);
   const y = 50 - (lat + 1) * 0.9;
   return { x: ((x % 100) + 100) % 100, y };
