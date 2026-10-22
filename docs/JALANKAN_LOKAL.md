@@ -111,6 +111,8 @@ python app.py
 
 Buka `http://127.0.0.1:7860`. Semua rute API berada di alamat yang sama, jadi tidak ada masalah CORS.
 
+Frontend memakai alamat halaman itu sendiri sebagai alamat API, sehingga `frontend\.env` tidak perlu dibuat. Bila tetap dibuat, `VITE_API_URL` harus berupa URL biasa seperti `VITE_API_URL=http://127.0.0.1:7860` tanpa tanda kurung atau teks tambahan, lalu `npm run build` dijalankan ulang. Nilai yang tidak valid diabaikan, dan frontend kembali memakai alamat halaman.
+
 ### 5.3 Mode pengembangan
 
 ```powershell
@@ -201,6 +203,7 @@ curl.exe -s -H "ngrok-skip-browser-warning: 1" https://nama-domain.ngrok-free.ap
 | Gejala | Penyebab | Tindakan |
 |---|---|---|
 | `Frontend belum dibangun` | `frontend/dist` tidak ada | `cd frontend; npm run build` |
+| Semua tab kosong padahal `/api/health` menjawab `ok` | `frontend\.env` berisi `VITE_API_URL` salah, atau `frontend\dist` masih hasil build lama | Hapus `VITE_API_URL` di `frontend\.env`, lalu `npm run build` di folder `frontend` |
 | `FIRMS_KEY belum dikonfigurasi` | `backend/.env` kosong atau salah nama | Isi `FIRMS_KEY` lalu restart Flask |
 | Halaman ngrok menampilkan peringatan | Header belum terkirim | Pastikan membuka aplikasi lewat alamat ngrok, bukan `127.0.0.1` |
 | `Address already in use` | Port 7860 dipakai proses lain | `.\scripts\start-local.ps1 -Port 8080` |
