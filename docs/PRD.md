@@ -4,14 +4,14 @@
 |---|---|
 | Versi dokumen | 1.0 |
 | Tanggal | 12 Oktober 2026 |
-| Status produk | Prototype berjalan di hosting gratis |
+| Status produk | Prototype berjalan lokal di laptop |
 | Pemilik | hissyam90 |
 | Konteks | Project UTS mata kuliah Dasar Kecerdasan Artifisial (DKA), Universitas Mulawarman |
 | Repositori | https://github.com/hissyam90/kalimantan-wildfire-hotspot-detection |
-| Demo | https://kalimantan-wildfire.vercel.app |
-| Backend | https://wildfire-app-private-production.up.railway.app |
+| Demo | http://127.0.0.1:7860 |
+| Backend | http://127.0.0.1:7860 (Flask, satu proses dengan frontend) |
 
-Dokumen ini untuk pemilik proyek dan untuk AI atau developer lain yang melanjutkan pekerjaan. Panduan teknis operasional ada di `AGENTS.md`.
+Dokumen ini untuk pemilik proyek dan untuk AI atau developer lain yang melanjutkan pekerjaan. Panduan teknis operasional ada di `docs/JALANKAN_LOKAL.md`.
 
 ---
 
@@ -92,12 +92,12 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | ID | Persyaratan |
 |---|---|
 | NFR-01 | Kunci API tidak boleh ada di kode atau riwayat git; disimpan sebagai environment variable. |
-| NFR-02 | CORS hanya mengizinkan domain frontend produksi dan `http://localhost:5173`. |
+| NFR-02 | CORS hanya mengizinkan `http://localhost:5173` dan `http://127.0.0.1:7860`; permintaan same-origin dari Flask tidak memerlukan CORS. |
 | NFR-03 | `/api/predict` dibatasi 10 permintaan per menit per IP dan 5 MB per file. |
 | NFR-04 | Jumlah panggilan OpenWeatherMap tidak melebihi 60 per menit (batas gratis); saat ini 10 panggilan per 10 menit. |
 | NFR-05 | Peta tetap responsif pada sampai sekitar 11.000 titik (periode 48 jam) di laptop standar. |
 | NFR-06 | Antarmuka berbahasa Indonesia, desain datar tanpa emoji dan tanpa gradient. |
-| NFR-07 | Aplikasi harus berjalan di hosting gratis (Vercel untuk frontend, Railway untuk backend). |
+| NFR-07 | Aplikasi harus berjalan penuh di laptop tanpa layanan berbayar; tunnel ngrok hanya dipakai saat demo ke perangkat lain. |
 
 ## 8. Arsitektur sistem
 
@@ -106,27 +106,30 @@ flowchart LR
   subgraph Browser
     UI["React + Vite + react-leaflet"]
   end
-  subgraph Vercel
-    STATIC["Hosting frontend statis"]
-  end
-  subgraph Railway["Railway (Docker, Node 20 + Python 3)"]
-    API["Express API"]
+  subgraph Laptop["Laptop: http://127.0.0.1:7860"]
+    FLASK["Flask app.py"]
+    STATIC["frontend/dist hasil build"]
     PY["Python infer.py + TensorFlow"]
     MODEL[("wildfire_model.h5")]
     CACHE[("Cache memori")]
   end
+  NGROK["ngrok, opsional"]
   FIRMS["NASA FIRMS API"]
   OWM["OpenWeatherMap API"]
+  WAQI["WAQI API"]
 
+  FLASK --> STATIC
   STATIC --> UI
-  UI -->|"GET /api/hotspots"| API
-  UI -->|"GET /api/wind"| API
-  UI -->|"POST /api/predict"| API
-  API --> CACHE
-  API -->|"CSV hotspot 3 hari"| FIRMS
-  API -->|"cuaca dan angin"| OWM
-  API -->|"spawn python"| PY
+  UI -->|"GET /api/hotspots"| FLASK
+  UI -->|"GET /api/wind"| FLASK
+  UI -->|"POST /api/predict"| FLASK
+  FLASK --> CACHE
+  FLASK -->|"CSV hotspot 3 hari"| FIRMS
+  FLASK -->|"cuaca, angin, dan AQI"| OWM
+  FLASK -->|"AQI stasiun"| WAQI
+  FLASK -->|"spawn python"| PY
   PY --> MODEL
+  NGROK -.->|"akses penguji"| FLASK
 ```
 
 Ringkasan komponen:
@@ -134,10 +137,10 @@ Ringkasan komponen:
 | Lapisan | Teknologi |
 |---|---|
 | Frontend | React 19, Vite 8, react-leaflet 5, Leaflet 1.9, Recharts 3, axios |
-| Backend | Node.js 20, Express 5, multer, express-rate-limit, dotenv, axios |
-| Inferensi | Python 3, TensorFlow/Keras, Pillow, NumPy (dipanggil lewat `child_process.spawn`) |
-| Data eksternal | NASA FIRMS (VIIRS SNPP NRT), OpenWeatherMap (weather) |
-| Hosting | Vercel (frontend), Railway via Docker (backend) |
+| Backend | Python 3.13, Flask 3.1, Werkzeug, requests, python-dotenv |
+| Inferensi | Python 3, TensorFlow/Keras, Pillow, NumPy (dipanggil lewat `subprocess.Popen`) |
+| Data eksternal | NASA FIRMS (VIIRS NOAA-20/NOAA-21 NRT), OpenWeatherMap (weather dan air pollution), WAQI |
+| Hosting | Lokal di laptop, tunnel ngrok opsional untuk demo |
 
 ## 9. Alur proses
 
@@ -304,11 +307,11 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 | P1 | Simpan model sebagai `.keras` dan perbaiki konversi ONNX (pin versi Protobuf) |
 | P1 | Fitur kualitas udara per kota (F5): endpoint stasiun, AQI dari PM2.5 dan PM10, lencana di peta, tab daftar kota |
 | P1 | Perbaiki bounding box (utara 4.5, barat 108.5) dan tambah titik acuan angin di pedalaman |
-| P1 | Tambahkan `app.set('trust proxy', 1)` di server.js agar batas laju dihitung per IP pengguna, bukan per proxy Railway |
-| P1 | Rapikan README (Tailwind tidak dipakai, port lokal 5000, backend Node.js + Express) dan hapus `frontend/.vade-report` |
+| P2 | Tambahkan pilihan host `0.0.0.0` pada skrip agar aplikasi bisa dibuka dari HP di jaringan lokal |
+| P2 | Pisahkan dependensi ke virtual environment agar versi TensorFlow dan Flask terkunci per proyek |
 | P1 | Filter hotspot ke batas administrasi Indonesia memakai GeoJSON provinsi |
 | P1 | Pisahkan inferensi menjadi layanan yang memuat model sekali (FastAPI atau ONNX Runtime) |
-| P1 | Tambahkan `fileFilter` multer (hanya jpg/png) dan respons error JSON yang jelas |
+| P1 | Validasi ekstensi dan tipe MIME berkas di `/api/predict`, bukan hanya batas ukuran 5 MB |
 | P2 | Hitung ISPU (skala Indonesia) selain AQI AS |
 | P2 | Riwayat harian jumlah hotspot dan AQI (Supabase atau sejenis) |
 | P2 | CNN pada tile citra satelit (mis. NASA GIBS) di sekitar hotspot |

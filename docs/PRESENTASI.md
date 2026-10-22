@@ -13,7 +13,7 @@ Naskah bicara per poin syarat UTS (1-6) tersedia di [NASKAH_PRESENTASI.md](NASKA
 **Pantau Karhutla Kalimantan** adalah aplikasi web untuk membantu pengguna melihat tiga jenis informasi yang saling melengkapi:
 
 1. **Peta hotspot**: lokasi observasi panas dari satelit NASA FIRMS.
-2. **Kondisi kota**: cuaca dan AQI dari WAQI di 17 kota pantauan Kalimantan.
+2. **Kondisi kota**: cuaca dan AQI dari WAQI di 23 kota pantauan Kalimantan.
 3. **Verifikasi citra**: bantuan klasifikasi gambar menggunakan CNN dua kelas.
 
 Aplikasi ini bukan sistem pemadam kebakaran dan bukan pengganti laporan resmi. Tujuannya adalah membuat informasi awal lebih mudah dibaca serta membantu pengguna menentukan informasi apa yang perlu diperiksa berikutnya.
@@ -87,7 +87,7 @@ classDiagram
         +request_prediksi(data)
     }
 
-    class BackendExpress {
+    class BackendFlask {
         -api_key_nasa : str
         -api_key_owm : str
         +get_nasa_firms_data()
@@ -113,10 +113,10 @@ classDiagram
         +predict_hotspot()
     }
 
-    FrontendReact <--> BackendExpress : HTTP Requests / API REST
-    BackendExpress ..> NASAFIRMS : Fetch Data
-    BackendExpress ..> OpenWeatherMap : Fetch Data
-    BackendExpress --> CNNPython : /api/predict
+    FrontendReact <--> BackendFlask : HTTP Requests / API REST
+    BackendFlask ..> NASAFIRMS : Fetch Data
+    BackendFlask ..> OpenWeatherMap : Fetch Data
+    BackendFlask --> CNNPython : /api/predict
 ```
 
 Endpoint utama:
@@ -171,8 +171,7 @@ Jalankan backend:
 
 ```powershell
 cd backend
-npm install
-node server.js
+python app.py
 ```
 
 Jalankan frontend pada terminal lain:

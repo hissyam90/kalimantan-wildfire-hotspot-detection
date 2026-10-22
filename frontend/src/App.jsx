@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Analytics } from '@vercel/analytics/react';
 import HotspotMap from './HotspotMap';
 import ImageVerification from './ImageVerification';
 import CityConditions from './CityConditions';
@@ -61,7 +60,6 @@ function App() {
       <main className={tab === 'map' ? 'content content-full' : 'content content-verify'}>
         {tab === 'map' ? <HotspotMap smokeEnabled={smokeEnabled} /> : tab === 'cities' ? <CityConditions /> : <ImageVerification />}
       </main>
-      <Analytics />
     </div>
   );
 }

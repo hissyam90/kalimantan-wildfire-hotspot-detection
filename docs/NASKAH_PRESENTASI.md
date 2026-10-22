@@ -14,7 +14,7 @@ Bagian ini menjawab pertanyaan "alt-tab ke mana". Prinsipnya: **hanya tiga jende
 
 | Jendela | Isi | Dipakai pada poin |
 |---|---|---|
-| **Jendela 1 — Browser** | Tab 1: aplikasi live `https://kalimantan-wildfire.vercel.app` · Tab 2: notebook Colab | 2, 5, 6 |
+| **Jendela 1 — Browser** | Tab 1: aplikasi lokal `http://127.0.0.1:7860`, atau URL ngrok saat demo | 2, 5, 6 |
 | **Jendela 2 — VS Code** | Tab editor: `PRD.md` (preview), `NASKAH_PRESENTASI.md` (preview), `assets/05-confusion-matrix.png`, `backend/python/infer.py` | 2, 3, 4 |
 | **Jendela 3 — PowerShell** | Folder `E:\Coding\wildfire-app`, siap menjalankan `infer.py` | 4, 6 (opsional) |
 
@@ -27,7 +27,7 @@ Kolom **Alt+Tab ke** berisi jendela tujuan; tulisan **tetap** berarti Anda tidak
 | **1. EDA** | Jendela 1 | Tab 2 (Colab), `Ctrl+F` → `Number of pictures` | Output jumlah gambar train/test/valid | "Ini pembagian data yang kami pakai." |
 | **1. EDA** | tetap | Colab, scroll ke `viz_img(df_train)` (cell 9) | Dua contoh citra: `wildfire` dan `nowildfire` | "Contoh kelasnya seperti ini." |
 | **1. EDA** | tetap | Colab, scroll ke `def create_gen()` (cell 12) | Baris `target_size=(224, 224)` dan `preprocess_input` | "Di sini resize dan normalisasi terjadi." |
-| **2. Arsitektur** | Jendela 2 | Tab `PRD.md`, scroll **§8 Arsitektur sistem** | Diagram mermaid: Vercel → Railway → FIRMS/OWM/WAQI + Python | "Tiga bagian: frontend, backend, model." |
+| **2. Arsitektur** | Jendela 2 | Tab `PRD.md`, scroll **§8 Arsitektur sistem** | Diagram mermaid: browser → Flask lokal → FIRMS/OWM/WAQI + Python, ngrok opsional | "Tiga bagian: frontend, backend, model." |
 | **2. Arsitektur** | Jendela 1 | Tab 1 (aplikasi), klik tab **Peta hotspot** → **Kondisi kota** → **Verifikasi citra** | Tiga tab aplikasi | "Ketiganya terlihat di satu aplikasi." |
 | **3. Flowchart** | Jendela 2 | Tab `PRD.md`, scroll **§9.1** lalu **§9.2** | Dua diagram alur: data peta dan verifikasi citra | "Alurnya dua jalur terpisah." |
 | **4. Pseudocode** | Jendela 2 | Tab `PRD.md`, scroll **Lampiran A.1** dan **A.2** | Blok pseudocode training dan inferensi | "Ini pseudocode-nya." |
@@ -93,7 +93,7 @@ Angka-angka penting juga tersedia di lembar fakta (§H), sehingga presentasi tet
 
 ### Naskah
 
-> "Arsitektur aplikasi terdiri dari tiga bagian. Frontend React di Vercel menampilkan peta, kartu kota, dan panel verifikasi citra. Backend Express di Railway menjadi satu-satunya pintu data: ia mengambil titik panas dari NASA FIRMS, cuaca dan angin dari OpenWeatherMap, serta AQI dari WAQI. Ketiga sumber ini di-cache sementara supaya tidak meminta data berulang kali."
+> "Arsitektur aplikasi terdiri dari tiga bagian. Frontend React menampilkan peta, kartu kota, dan panel verifikasi citra. Backend Flask berjalan di laptop dan menjadi satu-satunya pintu data: ia menyajikan halaman hasil build sekaligus mengambil titik panas dari NASA FIRMS, cuaca dan angin dari OpenWeatherMap, serta AQI dari WAQI. Ketiga sumber ini di-cache sementara supaya tidak meminta data berulang kali. Saat demo, tunnel ngrok hanya meneruskan alamat lokal itu supaya penguji bisa membukanya dari perangkat lain."
 
 > "Untuk verifikasi citra, backend menyimpan file model dan memanggil proses Python terpisah. Jadi model tidak berjalan di browser pengguna, dan API key tidak pernah dikirim ke frontend."
 
@@ -111,7 +111,7 @@ Angka-angka penting juga tersedia di lembar fakta (§H), sehingga presentasi tet
 
 > "Alurnya dua jalur terpisah. Jalur pertama, data peta: frontend meminta hotspot, backend memeriksa cache, kalau kosong ia memanggil FIRMS, menyaring koordinat ke wilayah Kalimantan, mengubah format, lalu mengirim GeoJSON ke peta. Ada juga jalur cuaca dan angin dari OpenWeatherMap dan AQI dari WAQI untuk kartu kota."
 
-> "Jalur kedua, verifikasi citra: pengguna mengunggah gambar, Express memvalidasi tipe dan ukuran, menyimpannya sementara, lalu menjalankan skrip Python. Skrip itu memuat model, melakukan resize dan normalisasi, memanggil predict, dan mengembalikan label beserta skor. Setelah itu berkas sementara dihapus."
+> "Jalur kedua, verifikasi citra: pengguna mengunggah gambar, Flask memvalidasi tipe dan ukuran, menyimpannya sementara, lalu menjalankan skrip Python. Skrip itu memuat model, melakukan resize dan normalisasi, memanggil predict, dan mengembalikan label beserta skor. Setelah itu berkas sementara dihapus."
 
 > "Dua jalur ini tidak pernah bertemu. CNN tidak menerima koordinat, dan peta tidak menerima hasil klasifikasi. Itu keputusan desain, bukan kekurangan, supaya pengguna tidak salah membaca titik panas sebagai hasil CNN."
 

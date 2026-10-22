@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { API_URL } from './config';
+import { TUNNEL_HEADERS, API_URL } from './config';
 
 export default function ImageVerification() {
   const [file, setFile] = useState(null);
@@ -33,7 +33,8 @@ export default function ImageVerification() {
     try {
       const response = await fetch(`${API_URL}/api/predict`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: TUNNEL_HEADERS
       });
 
       if (!response.ok) {
