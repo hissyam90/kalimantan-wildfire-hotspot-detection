@@ -31,7 +31,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 
 | ID | Tujuan |
 |---|---|
-| G1 | Menampilkan hotspot FIRMS untuk jendela 24, 48, dan 72 jam terakhir di seluruh Kalimantan |
+| G1 | Menampilkan hotspot FIRMS untuk 1 hari (24 jam), 2 hari (48 jam), dan 3 hari (72 jam) kalender UTC terakhir di seluruh Kalimantan |
 | G2 | Memberi konteks cuaca dan arah angin di sekitar titik panas, serta kualitas udara per kota (F5) |
 | G3 | Menyediakan verifikasi citra berbasis CNN dengan proses yang transparan |
 | G4 | Memenuhi enam syarat dokumen UTS (lihat bagian 13) |
@@ -56,7 +56,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | ID | Fitur | Status | Catatan |
 |---|---|---|---|
 | F1 | Peta hotspot interaktif (Leaflet, tile OSM) | Selesai | Marker digambar dengan canvas (`preferCanvas`) |
-| F2 | Periode data 24 jam, 48 jam, dan 72 jam | Selesai | Jendela waktu bergeser, bukan hari kalender UTC |
+| F2 | Periode data 1 hari (24 jam), 2 hari (48 jam), dan 3 hari (72 jam) | Selesai | Mengikuti `DAY_RANGE` NASA FIRMS: hari kalender UTC, jadi `days=1` berisi hari ini sejak 00:00 UTC walau baru sebagian |
 | F3 | Animasi asap berbasis arah angin | Selesai | Ilustratif, maksimum 6000 partikel |
 | F4 | Statistik ringkas: total observasi dan rincian per satelit | Selesai | Angka mengikuti filter yang aktif |
 | F5 | Cuaca dan kualitas udara (AQI) per kota | Selesai | `CityConditions.jsx`: AQI, PM2.5, PM10, suhu, kelembapan, angin, pencarian kota |
@@ -74,8 +74,8 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 
 | ID | Persyaratan |
 |---|---|
-| FR-01 | Sistem mengambil hotspot VIIRS SNPP NRT dari NASA FIRMS untuk bounding box Kalimantan dan menyimpannya di cache memori (10 menit; 1 menit bila hasil kosong). |
-| FR-02 | Endpoint `/api/hotspots?days=1` mengembalikan titik dalam 24 jam terakhir, `days=2` dalam 48 jam terakhir, dihitung dari `acq_date` dan `acq_time` (UTC). |
+| FR-01 | Sistem mengambil hotspot VIIRS NRT dari NASA FIRMS untuk bounding box Kalimantan dan menyimpannya di cache memori (10 menit; 1 menit bila hasil kosong; cache juga kedaluwarsa begitu tanggal UTC berganti). |
+| FR-02 | Endpoint `/api/hotspots?days=N` mengembalikan titik untuk N hari kalender UTC terakhir dengan N = 1, 2, atau 3, sama seperti `DAY_RANGE=N` pada API area NASA FIRMS. `days=1` berarti hari ini sejak 00:00 UTC, `days=2` termasuk kemarin, `days=3` termasuk dua hari lalu. Batas hari dihitung dari `acq_date` dan `acq_time` (UTC). |
 | FR-03 | Frontend menampilkan hanya titik pada periode terpilih, semuanya berwarna sama; jumlah titik 48 jam harus lebih besar atau sama dengan 24 jam. |
 | FR-04 | Sistem mengambil cuaca (suhu, kelembapan, deskripsi, angin) untuk 10 kota acuan dari OpenWeatherMap dengan cache 10 menit. |
 | FR-05 | [Rencana] AQI dihitung dengan skala AQI AS (EPA) revisi 2024 dari PM2.5 dan PM10, nilai tertinggi menjadi AQI akhir, disertai kategori dan polutan dominan. |
@@ -95,7 +95,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | NFR-02 | CORS hanya mengizinkan `http://localhost:5173` dan `http://127.0.0.1:7860`; permintaan same-origin dari Flask tidak memerlukan CORS. |
 | NFR-03 | `/api/predict` dibatasi 10 permintaan per menit per IP dan 5 MB per file. |
 | NFR-04 | Jumlah panggilan OpenWeatherMap tidak melebihi 60 per menit (batas gratis); saat ini 10 panggilan per 10 menit. |
-| NFR-05 | Peta tetap responsif pada sampai sekitar 11.000 titik (periode 48 jam) di laptop standar. |
+| NFR-05 | Peta tetap responsif pada puluhan ribu titik (periode 2–3 hari) di laptop standar. |
 | NFR-06 | Antarmuka berbahasa Indonesia, desain datar tanpa emoji dan tanpa gradient. |
 | NFR-07 | Aplikasi harus berjalan penuh di laptop tanpa layanan berbayar; tunnel ngrok hanya dipakai saat demo ke perangkat lain. |
 
@@ -148,10 +148,10 @@ Ringkasan komponen:
 
 ```mermaid
 flowchart TD
-  A["Pengguna membuka tab Peta"] --> B["GET /api/hotspots?days=1 atau 2"]
+  A["Pengguna membuka tab Peta"] --> B["GET /api/hotspots?days=1, 2, atau 3"]
   A --> H["GET /api/wind"]
   B --> C{"Cache hotspot masih valid?"}
-  C -->|ya| F["Saring titik sesuai jendela 24 atau 48 jam"]
+  C -->|ya| F["Saring titik sesuai DAY_RANGE 1, 2, atau 3 hari (UTC)"]
   C -->|tidak| D["Ambil CSV FIRMS DAY_RANGE=3"]
   D --> E["Parse CSV, hitung timestamp UTC, saring area Borneo, simpan cache"]
   E --> F
@@ -188,11 +188,11 @@ flowchart TD
 
 | Sumber | Endpoint yang dipakai | Catatan |
 |---|---|---|
-| NASA FIRMS | `/api/area/csv/{MAP_KEY}/VIIRS_SNPP_NRT/{bbox}/{DAY_RANGE}` | Batas 5000 transaksi per 10 menit. `DAY_RANGE` berarti hari kalender UTC dari hari ini ke belakang, bukan 24 jam bergeser. Kolom penting: `latitude`, `longitude`, `bright_ti4`, `frp`, `confidence` (`l`, `n`, `h`), `acq_date`, `acq_time` (HHMM UTC), `daynight`, `satellite`. |
+| NASA FIRMS | `/api/area/csv/{MAP_KEY}/VIIRS_NOAA20_NRT/{bbox}/{DAY_RANGE}` dan `VIIRS_NOAA21_NRT` | Batas 5000 transaksi per 10 menit. `DAY_RANGE` berarti jumlah hari kalender UTC dari hari ini ke belakang (1 = hari ini saja, maksimum 5 untuk produk NRT), bukan 24 jam bergeser. Backend memakai `DAY_RANGE=3` sekali lalu menyaring hasilnya sendiri untuk periode 1, 2, atau 3 hari. Kolom penting: `latitude`, `longitude`, `bright_ti4`, `frp`, `confidence` (`l`, `n`, `h`), `acq_date`, `acq_time` (HHMM UTC), `daynight`, `satellite`. |
 | OpenWeatherMap | `/data/2.5/weather` | Suhu, kelembapan, deskripsi cuaca, angin (`wind.deg` adalah arah asal angin). Deskripsi masih berbahasa Inggris (belum memakai `lang=id`). |
 | OpenWeatherMap | `/data/2.5/air_pollution` | Belum dipakai. Rencana F5: konsentrasi PM2.5 dan PM10 dihitung menjadi AQI AS. |
 
-Bounding box hotspot saat ini: barat 108, selatan -4.5, timur 119, utara 4. Batas utara 4.0 memotong sebagian Kalimantan Utara (Nunukan, Sebatik, Krayan). Area persegi ini juga memuat ujung timur Belitung, pesisir barat Sulawesi, Sarawak, Sabah, dan Brunei (lihat bagian 14).
+Bounding box hotspot saat ini: barat 108, selatan -4.5, timur 119.5, utara 7.5. Kotak ini juga memuat sebagian Sarawak, Sabah, Brunei, dan pesisir barat Sulawesi (lihat bagian 14).
 
 Titik acuan cuaca: 10 kota (Pontianak, Singkawang, Ketapang, Palangka Raya, Sampit, Banjarmasin, Samarinda, Balikpapan, Tanjung Redeb, Tarakan) yang seluruhnya di pesisir atau dekat pesisir, sehingga medan angin di pedalaman hanya hasil interpolasi.
 
@@ -320,7 +320,7 @@ Presentasi UTS: 12 Oktober 2026. Makalah dikumpulkan paling lambat 16 Oktober 20
 ## 16. Definisi selesai (versi UTS)
 
 - Demo live dapat dibuka tanpa server lokal menyala.
-- Periode 24 jam dan 48 jam sama-sama menampilkan data dan 48 jam memuat lebih banyak titik.
+- Periode 1 hari dan 2 hari sama-sama menampilkan data dan 2 hari memuat lebih banyak titik (rentang hari kalender UTC, sama seperti `DAY_RANGE` NASA FIRMS).
 - Verifikasi citra menampilkan log proses lalu hasil klasifikasi.
 - Repositori publik tidak berisi kunci API.
 - Dokumen syarat 1-5 tersusun di makalah.
@@ -372,15 +372,18 @@ KELUARAN: label, confidence, probabilitas tiap kelas
 
 ```
 ALGORITMA HotspotJendelaWaktu
-MASUKAN : days (1 atau 2)
-KELUARAN: daftar titik pada 24 atau 48 jam terakhir
+MASUKAN : days (1, 2, atau 3)
+KELUARAN: daftar titik untuk days hari kalender UTC terakhir, setara DAY_RANGE NASA
 
-1. JIKA cache valid MAKA baris <- cache
-   SELAIN ITU baris <- ambil FIRMS(DAY_RANGE = 3); hitung ts = UTC(acq_date, acq_time) tiap baris; simpan cache
-2. jam <- 24 * days
-3. awal <- sekarang - jam
-4. KEMBALIKAN semua baris dengan ts >= awal
+1. JIKA cache berlaku (umur < 10 menit DAN tanggal UTC cache = hari ini) MAKA
+     baris <- cache
+   SELAIN ITU
+     baris <- ambil FIRMS(DAY_RANGE = 3); hitung ts = UTC(acq_date, acq_time) tiap baris; simpan cache
+2. awal <- tengah malam UTC hari ini - (days - 1) hari
+3. KEMBALIKAN semua baris dengan ts >= awal
 ```
+
+Contoh: pada 22 Oktober 2026 pukul 16.14 UTC, `days=1` mengembalikan titik sejak 22 Oktober 00.00 UTC, `days=2` sejak 21 Oktober 00.00 UTC, dan `days=3` sejak 20 Oktober 00.00 UTC. Karena hari ini baru berjalan sebagian, jumlah `days=1` wajar lebih kecil daripada 24 jam penuh yang bergeser.
 
 ### A.4 AQI per kota (rencana, F5)
 

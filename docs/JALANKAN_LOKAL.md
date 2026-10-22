@@ -33,7 +33,7 @@ Satu proses Flask pada port `7860` menangani:
 | `/` | Halaman aplikasi hasil build React |
 | `/api/health` | Cek server hidup |
 | `/api/model-status` | Cek file model CNN tersedia |
-| `/api/hotspots` | Titik panas NASA FIRMS (cache 10 menit) |
+| `/api/hotspots` | Titik panas NASA FIRMS untuk 1–3 hari kalender UTC (cache 10 menit, otomatis kedaluwarsa saat tanggal UTC berganti) |
 | `/api/wind` | Cuaca, angin, dan AQI 23 kota (cache 10 menit) |
 | `/api/predict` | Unggah gambar, log inferensi streaming, lalu baris `RESULT:` |
 
@@ -69,6 +69,7 @@ PORT=7860
 HOST=127.0.0.1
 PYTHON_BIN=python
 RGB_MODEL_PATH=model/wildfire_model.h5
+HOTSPOT_FETCH_TIMEOUT=90
 ```
 
 | Variabel | Arti |
@@ -79,6 +80,7 @@ RGB_MODEL_PATH=model/wildfire_model.h5
 | `FRONTEND_ORIGINS` | Hanya dipakai saat mode dev, agar `localhost:5173` boleh memanggil API |
 | `HOST` | `127.0.0.1` cukup untuk ngrok. Pakai `0.0.0.0` bila ingin diakses dari HP pada jaringan yang sama |
 | `RGB_MODEL_PATH` | Lokasi file model, relatif terhadap folder `backend` |
+| `HOTSPOT_FETCH_TIMEOUT` | Batas waktu satu permintaan CSV ke NASA FIRMS dalam detik (bawaan `90`). Naikkan bila unduhan FIRMS lambat |
 
 File `.env` tidak ikut ke Git. Jangan pernah menaruh kunci API di kode atau di dokumen.
 

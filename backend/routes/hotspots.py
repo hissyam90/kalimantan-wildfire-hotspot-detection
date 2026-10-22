@@ -3,7 +3,7 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import requests
@@ -16,8 +16,11 @@ COVERAGE = {"west": 108, "south": -4.5, "east": 119.5, "north": 7.5}
 PRODUCTS = ["VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT"]
 FETCH_DAYS = 3
 CACHE_SECONDS = 600
-REQUEST_TIMEOUT = 25
-WINDOW_HOURS = {1: 24, 2: 48, 3: 72}
+REQUEST_TIMEOUT = int(os.environ.get("HOTSPOT_FETCH_TIMEOUT") or 90)
+# `days` pada /api/hotspots dipetakan langsung ke DAY_RANGE NASA FIRMS (hari kalender UTC),
+# sehingga jumlah hari yang diambil sama dengan rentang terbesar yang bisa diminta.
+DAY_RANGES = (1, 2, 3)
+DAY_RANGE_HOURS = {1: 24, 2: 48, 3: 72}
 
 cache = None
 cache_lock = threading.Lock()
@@ -30,6 +33,15 @@ def now_ms():
 def iso_from_ms(value):
     moment = datetime.fromtimestamp(value / 1000, tz=timezone.utc)
     return moment.strftime("%Y-%m-%dT%H:%M:%S.") + f"{moment.microsecond // 1000:03d}Z"
+
+
+def utc_day_start_ms(*, days_back=0, reference_ms=None):
+    """Awal hari kalender UTC, digeser `days_back` hari ke belakang."""
+    moment = datetime.fromtimestamp(
+        (now_ms() if reference_ms is None else reference_ms) / 1000, tz=timezone.utc
+    )
+    midnight = datetime(moment.year, moment.month, moment.day, tzinfo=timezone.utc) - timedelta(days=days_back)
+    return int(midnight.timestamp() * 1000)
 
 
 def parse_csv(text):
@@ -128,13 +140,24 @@ def fetch_from_nasa():
                 sources.append({"product": product, "status": "failed"})
     if all(source["status"] == "failed" for source in sources):
         raise RuntimeError("Semua sumber FIRMS gagal")
-    return {"rows": rows, "sources": sources, "time": now_ms(), "fetchedAt": iso_from_ms(now_ms())}
+    fetched_at = now_ms()
+    return {
+        "rows": rows,
+        "sources": sources,
+        "time": fetched_at,
+        "fetchedAt": iso_from_ms(fetched_at),
+        "day": utc_day_start_ms(reference_ms=fetched_at),
+    }
 
 
 def load_rows():
     global cache
     with cache_lock:
-        if cache and now_ms() - cache["time"] < CACHE_SECONDS * 1000:
+        if (
+            cache
+            and cache.get("day") == utc_day_start_ms()
+            and now_ms() - cache["time"] < CACHE_SECONDS * 1000
+        ):
             return {**cache, "stale": False}
         try:
             cache = fetch_from_nasa()
@@ -152,11 +175,26 @@ def reset_cache():
         cache = None
 
 
+def select_rows(rows, days, confidence="all", min_frp=None, reference_ms=None):
+    """Saring baris cache mengikuti rentang hari kalender UTC, sama seperti DAY_RANGE NASA FIRMS."""
+    window_start = utc_day_start_ms(days_back=days - 1, reference_ms=reference_ms)
+    selected = []
+    for row in rows:
+        if row["ts"] < window_start:
+            continue
+        if confidence != "all" and row["confidence"] != confidence:
+            continue
+        if min_frp is not None and (row["frp"] is None or row["frp"] < min_frp):
+            continue
+        selected.append(row)
+    return window_start, selected
+
+
 @hotspots_bp.get("/api/hotspots")
 def list_hotspots():
     requested = request.args.get("days", type=int) or 1
-    days = requested if requested in WINDOW_HOURS else 1
-    hours = WINDOW_HOURS[days]
+    days = requested if requested in DAY_RANGES else 1
+    hours = DAY_RANGE_HOURS[days]
     confidence = (request.args.get("confidence") or "all").strip().lower()
     min_frp = to_number(request.args.get("minFrp"))
     if not os.environ.get("FIRMS_KEY") and cache is None:
@@ -171,16 +209,9 @@ def list_hotspots():
         }), 502
 
     current = now_ms()
-    window_start = current - hours * 3600 * 1000
-    selected = []
-    for row in payload["rows"]:
-        if row["ts"] < window_start:
-            continue
-        if confidence != "all" and row["confidence"] != confidence:
-            continue
-        if min_frp is not None and (row["frp"] is None or row["frp"] < min_frp):
-            continue
-        selected.append({
+    window_start, rows = select_rows(payload["rows"], days, confidence, min_frp, current)
+    hotspots = [
+        {
             "lat": row["lat"],
             "lon": row["lon"],
             "date": row["date"],
@@ -189,22 +220,26 @@ def list_hotspots():
             "confidence": row["confidence"],
             "frp": row["frp"],
             "observedAt": iso_from_ms(row["ts"]),
-        })
+        }
+        for row in rows
+    ]
 
     return jsonify({
         "days": days,
+        "dayRange": days,
         "hours": hours,
+        "windowMode": "calendar-day-utc",
         "source": "NASA FIRMS VIIRS NOAA-20/NOAA-21 NRT",
         "dataType": "active-fire point observations",
         "coverage": COVERAGE,
         "confidenceNote": "Confidence adalah kategori deteksi FIRMS, bukan probabilitas pasti dan bukan confidence CNN.",
-        "total": len(selected),
+        "total": len(hotspots),
         "filters": {"confidence": confidence, "minFrp": min_frp},
         "fetchedAt": payload["fetchedAt"],
         "windowStart": iso_from_ms(window_start),
         "windowEnd": iso_from_ms(current),
         "stale": bool(payload["stale"]),
         "sources": payload["sources"],
-        "hotspots": selected,
+        "hotspots": hotspots,
     })
 

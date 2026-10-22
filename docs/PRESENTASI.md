@@ -34,7 +34,7 @@ Proyek ini memisahkan ketiganya secara jelas:
 ### A. Peta hotspot
 
 - Menampilkan observasi NASA FIRMS VIIRS untuk wilayah Kalimantan.
-- Pengguna dapat memilih rentang 24 atau 48 jam.
+- Pengguna dapat memilih rentang 1, 2, atau 3 hari kalender UTC (24, 48, atau 72 jam), sama seperti `DAY_RANGE` NASA FIRMS.
 - Sidebar menampilkan jumlah titik, observasi terbaru, rentang waktu, dan sumber data.
 - Klik titik untuk melihat koordinat, waktu pengamatan, dan satelit yang digunakan.
 - NOAA-20 dan NOAA-21 adalah satelit berbeda. Waktu lintasan dan cakupannya berbeda, jadi jumlah observasi N20 dan N21 tidak harus sama; angka tersebut bukan jumlah kebakaran unik.
@@ -184,7 +184,7 @@ npm run dev
 
 ## 8. Alur demo
 
-1. Tunjukkan tab **Peta hotspot** dan ubah periode 24/48 jam.
+1. Tunjukkan tab **Peta hotspot** dan ubah periode 1/2/3 hari.
 2. Klik satu titik dan jelaskan bahwa data berasal dari observasi NASA FIRMS.
 3. Tunjukkan animasi asap, lalu tekankan bahwa itu ilustrasi arah angin.
 4. Buka **Kondisi kota** dan jelaskan bahwa AQI berasal dari WAQI, sedangkan cuaca dan angin berasal dari OpenWeatherMap.

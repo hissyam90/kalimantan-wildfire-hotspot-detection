@@ -198,7 +198,7 @@ Gambar uji harus disiapkan **sebelum** presentasi (satu citra satelit lanskap, J
 
 ## E. Skenario demo (kalau dosen minta demo langsung)
 
-1. **Peta hotspot** — ubah periode 24/48 jam, klik satu titik, sebut bahwa ini observasi NASA FIRMS, bukan jumlah kebakaran.
+1. **Peta hotspot** — ubah periode 1/2/3 hari, klik satu titik, sebut bahwa ini observasi NASA FIRMS, bukan jumlah kebakaran.
 2. **Animasi asap** — nyalakan lewat menu Pengaturan, tegaskan ini ilustrasi arah angin.
 3. **Kondisi kota** — tunjuk AQI dari WAQI dan cuaca dari OpenWeatherMap pada kartu yang sama.
 4. **Verifikasi citra** — unggah gambar, baca label dan skornya, ulangi kalimat "skor kemiripan, bukan probabilitas kebakaran".
