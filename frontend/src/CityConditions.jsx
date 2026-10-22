@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect, useMemo, useState } from 'react';
 import { API_URL } from './config';
+import { CLIENT_CACHE_MS, cachedGet, readCache } from './apiCache';
 
 function aqiLabel(value) {
   if (value == null) return 'AQI tidak tersedia';
@@ -19,17 +19,20 @@ function formatDate(value) {
 }
 
 export default function CityConditions() {
-  const [cities, setCities] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
   const [search, setSearch] = useState('');
+  const [remote, setRemote] = useState(null);
+  const [status, setStatus] = useState('idle');
+  // Cache dibaca saat render supaya kartu kota langsung tampil tanpa menunggu request.
+  const cached = useMemo(() => readCache('wind', 'local'), []);
+  const cities = remote || cached?.data.grid || [];
+  const loading = status === 'idle' && cities.length === 0;
+  const error = status === 'error';
 
   useEffect(() => {
     let cancelled = false;
-    axios.get(`${API_URL}/api/wind`, { timeout: 30000 })
-      .then(({ data }) => { if (!cancelled) setCities(data.grid || []); })
-      .catch(() => { if (!cancelled) setError(true); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    cachedGet('wind', `${API_URL}/api/wind`, { timeout: 60000, maxAgeMs: CLIENT_CACHE_MS, persist: 'local' })
+      .fresh.then(({ data }) => { if (!cancelled) { setRemote(data.grid || []); setStatus('ok'); } })
+      .catch(() => { if (!cancelled) setStatus('error'); });
     return () => { cancelled = true; };
   }, []);
 

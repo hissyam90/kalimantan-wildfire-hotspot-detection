@@ -47,9 +47,14 @@ GRID_POINTS = [
 ]
 
 cache = None
-cache_time = 0
 cache_lock = threading.Lock()
+refresh_lock = threading.Lock()
+warm_lock = threading.Lock()
+refreshing = False
 
+
+def now_seconds():
+    return time.time()
 
 
 def iso_now():
@@ -171,36 +176,113 @@ def fetch_grid():
     return results
 
 
+def build_payload():
+    has_waqi = bool(os.environ.get("WAQI_KEY"))
+    return {
+        "grid": fetch_grid(),
+        "fetchedAt": iso_now(),
+        "stale": False,
+        "refreshPending": False,
+        "context": "regional",
+        "airQualitySource": "WAQI" if has_waqi else "unavailable",
+        "airQualityNote": (
+            "AQI berasal dari World Air Quality Index (WAQI). Stasiun dan waktu pengukuran dapat berbeda dari titik pusat kota."
+            if has_waqi
+            else "WAQI_KEY belum dikonfigurasi; tidak ada status AQI yang dibuat-buat."
+        ),
+    }
+
+
+def read_cache():
+    with cache_lock:
+        return cache
+
+
+def store_cache(payload):
+    global cache
+    entry = {"payload": payload, "time": now_seconds()}
+    with cache_lock:
+        cache = entry
+    return entry
+
+
+def is_cache_fresh(snapshot, current):
+    return bool(snapshot) and current - snapshot["time"] < CACHE_SECONDS
+
+
+def refresh_cache():
+    """Ambil cuaca dan AQI terbaru lalu simpan. Dipakai thread latar belakang dan pengujian."""
+    payload = build_payload()
+    return store_cache(payload)["payload"]
+
+
+def refresh_worker():
+    global refreshing
+    try:
+        refresh_cache()
+    except Exception as error:
+        print(f"Gagal mengambil data angin: {error}")
+    finally:
+        with refresh_lock:
+            refreshing = False
+
+
+def refresh_in_background():
+    """Segarkan cache di thread lain. Hanya satu refresh berjalan dalam satu waktu."""
+    global refreshing
+    with refresh_lock:
+        if refreshing:
+            return False
+        refreshing = True
+    try:
+        threading.Thread(target=refresh_worker, name="wind-refresh", daemon=True).start()
+    except RuntimeError:
+        with refresh_lock:
+            refreshing = False
+        return False
+    return True
+
+
+def load_grid():
+    """Cache-first: data tersimpan langsung dipakai, pembaruan berjalan di latar belakang."""
+    current = now_seconds()
+    snapshot = read_cache()
+    if is_cache_fresh(snapshot, current):
+        return {**snapshot["payload"], "stale": False, "refreshPending": False}
+    if snapshot is None:
+        # Belum ada cache sama sekali: request pertama menunggu OpenWeatherMap/WAQI.
+        with warm_lock:
+            if read_cache() is None:
+                store_cache(build_payload())
+            snapshot = read_cache()
+        expired = not is_cache_fresh(snapshot, current)
+        return {**snapshot["payload"], "stale": expired, "refreshPending": expired}
+    refresh_in_background()
+    return {**snapshot["payload"], "stale": True, "refreshPending": True}
+
+
+def reset_cache():
+    global cache, refreshing
+    with cache_lock:
+        cache = None
+    with refresh_lock:
+        refreshing = False
+
+
 @wind_bp.get("/api/wind")
 def list_wind():
-    global cache, cache_time
     if not os.environ.get("OWM_KEY") and not os.environ.get("WAQI_KEY"):
         return jsonify({
             "error": "OWM_KEY atau WAQI_KEY belum dikonfigurasi",
             "code": "AIR_DATA_NOT_CONFIGURED",
         }), 503
-    with cache_lock:
-        if cache and time.time() - cache_time < CACHE_SECONDS:
-            return jsonify({**cache, "stale": False})
-        try:
-            result = {
-                "grid": fetch_grid(),
-                "fetchedAt": iso_now(),
-                "stale": False,
-                "context": "regional",
-                "airQualitySource": "WAQI" if os.environ.get("WAQI_KEY") else "unavailable",
-                "airQualityNote": (
-                    "AQI berasal dari World Air Quality Index (WAQI). Stasiun dan waktu pengukuran dapat berbeda dari titik pusat kota."
-                    if os.environ.get("WAQI_KEY")
-                    else "WAQI_KEY belum dikonfigurasi; tidak ada status AQI yang dibuat-buat."
-                ),
-            }
-        except Exception as error:
-            print(f"Gagal mengambil data angin: {error}")
-            if cache:
-                return jsonify({**cache, "stale": True})
-            return jsonify({"error": "Gagal mengambil data angin"}), 500
-        cache = result
-        cache_time = time.time()
-        return jsonify(result)
+    try:
+        payload = load_grid()
+    except Exception as error:
+        print(f"Gagal mengambil data angin: {error}")
+        return jsonify({"error": "Gagal mengambil data angin"}), 500
+    response = jsonify(payload)
+    # Cache HTTP dimatikan supaya cache aplikasi (server + apiCache.js) tetap satu-satunya acuan.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 

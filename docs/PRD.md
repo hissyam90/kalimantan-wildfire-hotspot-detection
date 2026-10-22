@@ -74,10 +74,10 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 
 | ID | Persyaratan |
 |---|---|
-| FR-01 | Sistem mengambil hotspot VIIRS NRT dari NASA FIRMS untuk bounding box Kalimantan dan menyimpannya di cache memori (10 menit; 1 menit bila hasil kosong; cache juga kedaluwarsa begitu tanggal UTC berganti). |
+| FR-01 | Sistem mengambil hotspot VIIRS NRT dari NASA FIRMS untuk bounding box Kalimantan dan menyimpannya di cache memori (10 menit; cache juga kedaluwarsa begitu tanggal UTC berganti). Pola cache-nya cache-first: bila cache sudah kedaluwarsa, respons lama tetap dikirim seketika dengan `stale: true` dan `refreshPending: true`, sementara data baru diambil di thread latar belakang (satu penyegaran pada satu waktu) sehingga tidak ada request yang menunggu unduhan FIRMS. |
 | FR-02 | Endpoint `/api/hotspots?days=N` mengembalikan titik untuk N hari kalender UTC terakhir dengan N = 1, 2, atau 3, sama seperti `DAY_RANGE=N` pada API area NASA FIRMS. `days=1` berarti hari ini sejak 00:00 UTC, `days=2` termasuk kemarin, `days=3` termasuk dua hari lalu. Batas hari dihitung dari `acq_date` dan `acq_time` (UTC). |
 | FR-03 | Frontend menampilkan hanya titik pada periode terpilih, semuanya berwarna sama; jumlah titik 48 jam harus lebih besar atau sama dengan 24 jam. |
-| FR-04 | Sistem mengambil cuaca (suhu, kelembapan, deskripsi, angin) untuk 10 kota acuan dari OpenWeatherMap dengan cache 10 menit. |
+| FR-04 | Sistem mengambil cuaca (suhu, kelembapan, deskripsi, angin) untuk 23 kota acuan dari OpenWeatherMap dan AQI dari WAQI dengan cache 10 menit serta pola cache-first yang sama seperti FR-01. |
 | FR-05 | [Rencana] AQI dihitung dengan skala AQI AS (EPA) revisi 2024 dari PM2.5 dan PM10, nilai tertinggi menjadi AQI akhir, disertai kategori dan polutan dominan. |
 | FR-06 | [Rencana] Peta menampilkan lencana AQI di tiap kota; klik membuka kartu kota (AQI, kategori, PM2.5, PM10, saran kesehatan, cuaca). |
 | FR-07 | [Rencana] Tab "Kualitas udara" menampilkan daftar kota terurut dari AQI terburuk; klik baris memindahkan peta ke kota tersebut dan membuka kartunya. |
@@ -86,6 +86,7 @@ Aplikasi WebGIS yang menampilkan titik panas satelit NASA FIRMS di Pulau Kaliman
 | FR-10 | `POST /api/predict` menerima satu gambar (field `image`, maksimum 5 MB), menjalankan CNN, dan men-stream log proses diikuti satu baris `RESULT:<json>`. |
 | FR-11 | Frontend menampilkan status, confidence, probabilitas per kelas, dan log proses secara real-time. |
 | FR-12 | Kegagalan pengambilan data ditampilkan sebagai pesan dengan tombol coba lagi, bukan tampilan kosong. |
+| FR-13 | Frontend memakai pola cache-first (`frontend/src/apiCache.js`): respons terakhir disimpan di memori (data kota juga di `localStorage`) sehingga tab atau filter yang dibuka lagi tampil seketika, lalu data terbaru tetap diambil dari server di belakang layar. Filter confidence dan FRP disaring di browser agar tidak memicu unduhan ulang payload besar. |
 
 ## 7. Persyaratan non-fungsional
 
@@ -150,21 +151,34 @@ Ringkasan komponen:
 flowchart TD
   A["Pengguna membuka tab Peta"] --> B["GET /api/hotspots?days=1, 2, atau 3"]
   A --> H["GET /api/wind"]
-  B --> C{"Cache hotspot masih valid?"}
+  B --> C{"Cache hotspot masih berlaku?"}
   C -->|ya| F["Saring titik sesuai DAY_RANGE 1, 2, atau 3 hari (UTC)"]
-  C -->|tidak| D["Ambil CSV FIRMS DAY_RANGE=3"]
+  C -->|sudah kedaluwarsa| F2["Kirim data lama seketika dengan stale dan refreshPending"]
+  C -->|belum ada cache| D["Ambil CSV FIRMS DAY_RANGE=3 (request pertama menunggu)"]
+  F2 --> D2["Thread latar belakang: ambil CSV FIRMS DAY_RANGE=3"]
   D --> E["Parse CSV, hitung timestamp UTC, saring area Borneo, simpan cache"]
+  D2 --> E
   E --> F
   F --> G["Kirim JSON ke frontend"]
-  H --> I{"Cache angin valid?"}
+  H --> I{"Cache angin masih berlaku?"}
   I -->|ya| L["Kirim JSON angin"]
-  I -->|tidak| J["Ambil cuaca 10 kota dari OpenWeatherMap"]
+  I -->|sudah kedaluwarsa| L2["Kirim grid lama seketika, segarkan di latar belakang"]
+  I -->|belum ada cache| J["Ambil cuaca dari OpenWeatherMap dan AQI dari WAQI"]
+  L2 --> J2["Thread latar belakang: ambil cuaca dan AQI"]
   J --> K["Simpan cache"]
+  J2 --> K
   K --> L
-  G --> M["Render titik dan statistik"]
+  G --> M["Pengguna membuka tab Peta: data langsung tampil dari apiCache.js"]
   L --> M
   M --> N["Animasi asap mengikuti vektor angin"]
 ```
+
+Cache berlapis membuat pemuatan kedua dan seterusnya tidak menunggu NASA:
+
+| Lapis | Isi | Masa berlaku | Catatan |
+|---|---|---|---|
+| Server (memori proses) | payload hotspot dan grid angin | 10 menit, atau sampai tanggal UTC berganti untuk hotspot | Setelah kedaluwarsa, respons lama tetap dikirim sambil disegarkan di thread latar belakang |
+| Browser (`apiCache.js`) | respons JSON terakhir per kunci | 2 menit | Data kota juga di `localStorage`; payload hotspot hanya di memori |
 
 ### 9.2 Alur verifikasi citra CNN
 

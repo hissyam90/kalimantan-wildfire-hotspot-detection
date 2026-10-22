@@ -24,6 +24,9 @@ DAY_RANGE_HOURS = {1: 24, 2: 48, 3: 72}
 
 cache = None
 cache_lock = threading.Lock()
+refresh_lock = threading.Lock()
+warm_lock = threading.Lock()
+refreshing = False
 
 
 def now_ms():
@@ -150,29 +153,94 @@ def fetch_from_nasa():
     }
 
 
-def load_rows():
+def read_cache():
+    with cache_lock:
+        return cache
+
+
+def store_cache(payload):
     global cache
     with cache_lock:
-        if (
-            cache
-            and cache.get("day") == utc_day_start_ms()
-            and now_ms() - cache["time"] < CACHE_SECONDS * 1000
-        ):
-            return {**cache, "stale": False}
-        try:
-            cache = fetch_from_nasa()
-        except Exception as error:
-            print(f"Gagal mengambil data FIRMS: {error}")
-            if cache:
-                return {**cache, "stale": True}
-            raise
-        return {**cache, "stale": False}
+        cache = payload
+    return payload
+
+
+def is_cache_fresh(snapshot, current):
+    """Cache masih sah bila belum lewat CACHE_SECONDS dan tanggal UTC-nya sama."""
+    return bool(
+        snapshot
+        and snapshot.get("day") == utc_day_start_ms(reference_ms=current)
+        and current - snapshot["time"] < CACHE_SECONDS * 1000
+    )
+
+
+def refresh_cache():
+    """Ambil data baru dari FIRMS lalu simpan. Dipakai thread latar belakang dan pengujian."""
+    global cache
+    payload = fetch_from_nasa()
+    with cache_lock:
+        latest = cache
+        if latest is not None and payload["time"] < latest["time"]:
+            return latest
+        cache = payload
+    return payload
+
+
+def refresh_worker():
+    global refreshing
+    try:
+        refresh_cache()
+    except Exception as error:
+        print(f"Gagal mengambil data FIRMS: {error}")
+    finally:
+        with refresh_lock:
+            refreshing = False
+
+
+def refresh_in_background():
+    """Segarkan cache di thread lain supaya request tidak menunggu unduhan FIRMS.
+
+    Hanya satu refresh berjalan pada satu waktu, jadi berapa pun request yang
+    datang bersamaan NASA tetap dipanggil sekali.
+    """
+    global refreshing
+    with refresh_lock:
+        if refreshing:
+            return False
+        refreshing = True
+    try:
+        threading.Thread(target=refresh_worker, name="firms-refresh", daemon=True).start()
+    except RuntimeError:
+        with refresh_lock:
+            refreshing = False
+        return False
+    return True
+
+
+def load_rows():
+    """Cache-first: data tersimpan langsung dipakai, pembaruan jalan di latar belakang."""
+    current = now_ms()
+    snapshot = read_cache()
+    if is_cache_fresh(snapshot, current):
+        return {**snapshot, "stale": False, "refreshPending": False}
+    if snapshot is None:
+        # Belum ada cache sama sekali: request pertama memang harus menunggu FIRMS.
+        with warm_lock:
+            if read_cache() is None:
+                store_cache(fetch_from_nasa())
+            snapshot = read_cache()
+        expired = not is_cache_fresh(snapshot, current)
+        return {**snapshot, "stale": expired, "refreshPending": expired}
+    refresh_in_background()
+    return {**snapshot, "stale": True, "refreshPending": True}
 
 
 def reset_cache():
-    global cache
+    global cache, refreshing
     with cache_lock:
         cache = None
+    with refresh_lock:
+        refreshing = False
 
 
 def select_rows(rows, days, confidence="all", min_frp=None, reference_ms=None):
@@ -197,7 +265,7 @@ def list_hotspots():
     hours = DAY_RANGE_HOURS[days]
     confidence = (request.args.get("confidence") or "all").strip().lower()
     min_frp = to_number(request.args.get("minFrp"))
-    if not os.environ.get("FIRMS_KEY") and cache is None:
+    if not os.environ.get("FIRMS_KEY") and read_cache() is None:
         return jsonify({"error": "FIRMS_KEY belum dikonfigurasi", "code": "FIRMS_NOT_CONFIGURED"}), 503
     try:
         payload = load_rows()
@@ -205,7 +273,7 @@ def list_hotspots():
         return jsonify({
             "error": "Pengambilan data NASA FIRMS gagal",
             "code": "FIRMS_FETCH_FAILED",
-            "stale": cache is not None,
+            "stale": read_cache() is not None,
         }), 502
 
     current = now_ms()
@@ -224,7 +292,7 @@ def list_hotspots():
         for row in rows
     ]
 
-    return jsonify({
+    response = jsonify({
         "days": days,
         "dayRange": days,
         "hours": hours,
@@ -239,7 +307,11 @@ def list_hotspots():
         "windowStart": iso_from_ms(window_start),
         "windowEnd": iso_from_ms(current),
         "stale": bool(payload["stale"]),
+        "refreshPending": bool(payload.get("refreshPending")),
         "sources": payload["sources"],
         "hotspots": hotspots,
     })
+    # Cache HTTP dimatikan supaya cache aplikasi (server + apiCache.js) tetap satu-satunya acuan.
+    response.headers["Cache-Control"] = "no-store"
+    return response
 

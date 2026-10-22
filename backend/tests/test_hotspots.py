@@ -105,20 +105,72 @@ class HotspotsCacheTest(unittest.TestCase):
             "day": utc_day_start_ms(reference_ms=moment_ms),
         }
 
-    def test_cache_is_reused_then_replaced_when_utc_date_changes(self):
-        late = datetime(2026, 10, 22, 23, 59, tzinfo=timezone.utc)
-        with mock.patch.object(hotspots, "now_ms", return_value=int(late.timestamp() * 1000)), \
-                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(late)) as fetch:
-            hotspots.load_rows()
-            hotspots.load_rows()
+    def test_fresh_cache_is_served_without_calling_firms_again(self):
+        moment = datetime(2026, 10, 22, 23, 58, tzinfo=timezone.utc)
+        with mock.patch.object(hotspots, "now_ms", return_value=int(moment.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(moment)) as fetch:
+            first = hotspots.load_rows()
+            second = hotspots.load_rows()
             self.assertEqual(fetch.call_count, 1)
+        self.assertFalse(first["refreshPending"])
+        self.assertFalse(second["stale"])
+        self.assertFalse(second["refreshPending"])
 
+    def test_expired_cache_is_served_while_refresh_runs_in_background(self):
+        old = datetime(2026, 10, 22, 10, 0, tzinfo=timezone.utc)
+        later = datetime(2026, 10, 22, 10, 30, tzinfo=timezone.utc)
+        with mock.patch.object(hotspots, "now_ms", return_value=int(old.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(old)):
+            hotspots.load_rows()
+        with mock.patch.object(hotspots, "now_ms", return_value=int(later.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "refresh_in_background") as refresh, \
+                mock.patch.object(hotspots, "fetch_from_nasa") as fetch:
+            payload = hotspots.load_rows()
+        refresh.assert_called_once_with()
+        fetch.assert_not_called()
+        self.assertTrue(payload["stale"])
+        self.assertTrue(payload["refreshPending"])
+        self.assertEqual(payload["fetchedAt"], self._payload(old)["fetchedAt"])
+
+    def test_utc_date_roll_serves_cache_and_refreshes_in_background(self):
+        late = datetime(2026, 10, 22, 23, 59, tzinfo=timezone.utc)
         early = datetime(2026, 10, 23, 0, 1, tzinfo=timezone.utc)
+        with mock.patch.object(hotspots, "now_ms", return_value=int(late.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(late)):
+            hotspots.load_rows()
         with mock.patch.object(hotspots, "now_ms", return_value=int(early.timestamp() * 1000)), \
-                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(early)) as fetch:
+                mock.patch.object(hotspots, "refresh_in_background") as refresh:
+            payload = hotspots.load_rows()
+        refresh.assert_called_once_with()
+        self.assertTrue(payload["refreshPending"])
+        self.assertEqual(payload["day"], utc_day_start_ms(reference_ms=int(late.timestamp() * 1000)))
+
+    def test_background_refresh_replaces_cached_rows(self):
+        old = datetime(2026, 10, 22, 10, 0, tzinfo=timezone.utc)
+        new = datetime(2026, 10, 22, 10, 11, tzinfo=timezone.utc)
+        with mock.patch.object(hotspots, "now_ms", return_value=int(old.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(old)):
+            hotspots.load_rows()
+        with mock.patch.object(hotspots, "now_ms", return_value=int(new.timestamp() * 1000)), \
+                mock.patch.object(hotspots, "fetch_from_nasa", return_value=self._payload(new)) as fetch:
+            hotspots.refresh_cache()
             payload = hotspots.load_rows()
             self.assertEqual(fetch.call_count, 1)
-            self.assertEqual(payload["day"], utc_day_start_ms(reference_ms=int(early.timestamp() * 1000)))
+        self.assertEqual(payload["fetchedAt"], self._payload(new)["fetchedAt"])
+        self.assertFalse(payload["refreshPending"])
+
+    def test_background_refresh_runs_only_once_at_a_time(self):
+        with mock.patch.object(hotspots, "threading") as threading_mock:
+            self.assertTrue(hotspots.refresh_in_background())
+            self.assertFalse(hotspots.refresh_in_background())
+        threading_mock.Thread.assert_called_once()
+
+    def test_refresh_worker_clears_flag_when_firms_fails(self):
+        hotspots.refreshing = True
+        with mock.patch.object(hotspots, "fetch_from_nasa", side_effect=RuntimeError("FIRMS down")):
+            hotspots.refresh_worker()
+        self.assertFalse(hotspots.refreshing)
+        self.assertIsNone(hotspots.read_cache())
 
 
 if __name__ == "__main__":

@@ -33,9 +33,21 @@ Satu proses Flask pada port `7860` menangani:
 | `/` | Halaman aplikasi hasil build React |
 | `/api/health` | Cek server hidup |
 | `/api/model-status` | Cek file model CNN tersedia |
-| `/api/hotspots` | Titik panas NASA FIRMS untuk 1–3 hari kalender UTC (cache 10 menit, otomatis kedaluwarsa saat tanggal UTC berganti) |
-| `/api/wind` | Cuaca, angin, dan AQI 23 kota (cache 10 menit) |
+| `/api/hotspots` | Titik panas NASA FIRMS untuk 1–3 hari kalender UTC (cache memori 10 menit, otomatis kedaluwarsa saat tanggal UTC berganti) |
+| `/api/wind` | Cuaca, angin, dan AQI 23 kota (cache memori 10 menit) |
 | `/api/predict` | Unggah gambar, log inferensi streaming, lalu baris `RESULT:` |
+
+### 1.1 Cara kerja cache
+
+Kedua endpoint data memakai pola **cache-first sambil menyegarkan di latar belakang**:
+
+- Bila cache masih berlaku, respons diambil langsung dari memori tanpa memanggil NASA atau OpenWeatherMap.
+- Bila cache sudah kedaluwarsa (atau tanggal UTC berganti), endpoint **tetap menjawab seketika** dengan data lama sambil menandai `stale: true` dan `refreshPending: true`. Data baru diambil di thread terpisah, jadi tidak ada request yang menunggu unduhan FIRMS 60–90 detik.
+- Hanya satu penyegaran berjalan pada satu waktu, sehingga berapa pun request yang datang bersamaan tetap menghasilkan satu panggilan ke NASA/OpenWeatherMap.
+- Bila penyegaran gagal, cache lama tetap dipakai dan pesan galat hanya muncul ketika belum ada cache sama sekali.
+- Di sisi browser, `frontend/src/apiCache.js` menyimpan respons terakhir. Tab yang dibuka ulang atau filter yang dikembalikan ke nilai sebelumnya langsung terisi dari cache tersebut, lalu tetap diperbarui setelah respons baru datang. Data kota juga disimpan di `localStorage` karena ukurannya kecil; payload hotspot (bisa beberapa MB) hanya disimpan di memori.
+- Header `Cache-Control: no-store` dipasang pada respons JSON agar cache browser tidak bertabrakan dengan dua lapis cache di atas.
+- Filter `confidence` dan `minFrp` disaring di browser dari payload yang sudah ada, jadi mengubah filter tidak memicu unduhan ulang.
 
 ## 2. Prasyarat
 
@@ -180,7 +192,7 @@ Hasil yang diharapkan:
 |---|---|
 | `/api/health` | `{"status":"ok"}` |
 | `/api/model-status` | `"ready":true` |
-| `/api/hotspots` | `"total"` lebih dari nol dan `"sources"` berisi dua produk `available` |
+| `/api/hotspots` | `"total"` lebih dari nol, `"sources"` berisi dua produk `available`, dan `"stale"`/`"refreshPending"` bernilai `false` saat cache masih berlaku |
 | `/api/wind` | `grid` berisi 23 kota dengan `windSpeed` dan `airQuality` |
 | `/api/predict` | Baris log bertahap, diakhiri `RESULT:{...}` dengan `parameters: 2438722` |
 
@@ -197,7 +209,7 @@ curl.exe -s -H "ngrok-skip-browser-warning: 1" https://nama-domain.ngrok-free.ap
 | Laptop harus hidup | Aplikasi mati saat laptop tidur atau terminal ditutup |
 | TensorFlow dimuat tiap prediksi | Baris log pertama muncul seketika, tetapi hasil butuh sekitar 15 sampai 20 detik karena `infer.py` dijalankan sebagai proses baru |
 | Kuota ngrok gratis | 20.000 permintaan per bulan, cukup untuk demo |
-| Data FIRMS bergantung internet | Bila NASA tidak dapat dihubungi, endpoint menjawab 502 dan memakai cache terakhir bila ada |
+| Data FIRMS bergantung internet | Bila NASA tidak dapat dihubungi, endpoint tetap menyajikan cache terakhir; galat 502 hanya muncul ketika belum ada cache sama sekali |
 | Tidak ada HTTPS lokal | Tunnel ngrok sudah menyediakan HTTPS |
 
 ## 9. Pemecahan masalah
@@ -215,7 +227,7 @@ curl.exe -s -H "ngrok-skip-browser-warning: 1" https://nama-domain.ngrok-free.ap
 
 ## 10. Daftar periksa sebelum demo
 
-1. `python -m unittest discover -s tests -t .` di folder `backend` menghasilkan 6 tes lolos.
+1. `python -m unittest discover -s tests -t .` di folder `backend` menghasilkan 19 tes lolos.
 2. `npm run build` di folder `frontend` selesai tanpa galat.
 3. `.\scripts\start-local.ps1 -Domain "xxxx.ngrok-free.app"` mencetak URL publik dan `Verifikasi ... OK`.
 4. Tiga tab aplikasi dibuka: Peta hotspot, Kondisi kota, Verifikasi citra.
